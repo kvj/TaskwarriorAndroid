@@ -66,7 +66,8 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
     private void syncCall() {
         logger.d("Will call sync");
         callTask(outConsumer, errConsumer, "--version");
-        callTask(outConsumer, errConsumer, "rc.taskd.socket=" + SYNC_SOCKET, "rc.color=off", "sync", "init");
+        // callTask(outConsumer, errConsumer, "rc.color=off", "next");
+        callTask(outConsumer, errConsumer, "rc.taskd.socket=" + SYNC_SOCKET, "rc.color=off", "sync");
     }
 
     private String eabiExecutable() {
@@ -94,19 +95,17 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
         return null;
     }
 
-    private boolean readStream(InputStream stream, final StreamConsumer consumer) {
+    private Thread readStream(InputStream stream, final StreamConsumer consumer) {
         final BufferedReader reader;
         try {
             reader = new BufferedReader(new InputStreamReader(stream, "utf-8"));
         } catch (UnsupportedEncodingException e) {
             logger.e("Error opening stream");
-            return false;
+            return null;
         }
-        new Tasks.VerySimpleTask(
-
-        ) {
+        Thread thread = new Thread() {
             @Override
-            protected void doInBackground() {
+            public void run() {
                 logger.d("Ready to listen stream");
                 String line;
                 try {
@@ -120,8 +119,9 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
                     logger.e(e, "Error reading stream");
                 }
             }
-        }.exec();
-        return true;
+        };
+        thread.start();
+        return thread;
     }
 
     private String initTasksFolder() {
@@ -152,13 +152,14 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
             pb.directory(context().getFilesDir());
             pb.environment().put("TASKRC", "/storage/sdcard/.taskrc.android");
             pb.environment().put("TASKDATA", tasksFolder);
-            pb.redirectErrorStream(true);
             Process p = pb.start();
             logger.d("Calling now:", executable, arguments.length);
-            readStream(p.getInputStream(), out);
-//            readStream(p.getErrorStream(), err);
+            Thread outThread = readStream(p.getInputStream(), out);
+            Thread errThread = readStream(p.getErrorStream(), err);
             int exitCode = p.waitFor();
             logger.d("Exit code:", exitCode, arguments.length);
+            if (null != outThread) outThread.join();
+            if (null != errThread) errThread.join();
             return 0 == exitCode;
         } catch (Exception e) {
             logger.e(e, "Failed to execute task");
@@ -188,7 +189,6 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
                 }
             };
             acceptThread.start();
-            Thread.yield();
             return socket; // Close me later on stop
         } catch (IOException e) {
             logger.e(e, "Failed to open local socket");
