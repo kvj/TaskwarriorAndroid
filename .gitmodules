@@ -1,0 +1,3 @@
+[submodule "Lima1Common"]
+	path = Lima1Common
+	url = git@github.com:kvj/Lima1Common.git
