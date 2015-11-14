@@ -10,11 +10,23 @@ import org.kvj.bravo7.util.Tasks;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.Socket;
+import java.security.GeneralSecurityException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import javax.net.ssl.SSLSocketFactory;
+
+import kvj.taskw.sync.SSLHelper;
 
 /**
  * Created by vorobyev on 10/4/15.
@@ -65,9 +77,9 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
 
     private void syncCall() {
         logger.d("Will call sync");
-        callTask(outConsumer, errConsumer, "--version");
+        callTask(outConsumer, errConsumer, "next");
         // callTask(outConsumer, errConsumer, "rc.color=off", "next");
-        callTask(outConsumer, errConsumer, "rc.taskd.socket=" + SYNC_SOCKET, "rc.color=off", "sync");
+        callTask(outConsumer, errConsumer, "rc.taskd.socket=" + SYNC_SOCKET, "sync");
     }
 
     private String eabiExecutable() {
@@ -95,6 +107,29 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
         return null;
     }
 
+    Pattern linePatthern = Pattern.compile("^([A-Za-z0-9\\._]+)\\s+(\\S.*)$");
+
+    private Map<String, String> taskSettings(final String... names) {
+        final Map<String, String> result = new HashMap<>();
+        callTask(new StreamConsumer() {
+            @Override
+            public void eat(String line) {
+                Matcher m = linePatthern.matcher(line);
+                if (m.find()) {
+                    String keyName = m.group(1).trim();
+                    String keyValue = m.group(2).trim();
+                    for (String name : names) {
+                        if (name.equalsIgnoreCase(keyName)) {
+                            result.put(name, keyValue);
+                            break;
+                        }
+                    }
+                }
+            }
+        }, errConsumer, "show");
+        return result;
+    }
+
     private Thread readStream(InputStream stream, final StreamConsumer consumer) {
         final BufferedReader reader;
         try {
@@ -106,7 +141,6 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
         Thread thread = new Thread() {
             @Override
             public void run() {
-                logger.d("Ready to listen stream");
                 String line;
                 try {
                     while ((line = reader.readLine()) != null) {
@@ -114,9 +148,13 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
                             consumer.eat(line);
                         }
                     }
-                    reader.close();
                 } catch (Exception e) {
                     logger.e(e, "Error reading stream");
+                } finally {
+                    try {
+                        reader.close();
+                    } catch (IOException e) {
+                    }
                 }
             }
         };
@@ -143,10 +181,12 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
             if (null == tasksFolder) {
                 throw new RuntimeException("Invalid folder");
             }
-            String[] args = new String[arguments.length+1];
+            String[] args = new String[arguments.length+3];
             args[0] = executable;
+            args[1] = "rc.color=off";
+            args[2] = "rc.verbose=nothing";
             for (int i = 0; i < arguments.length; i++) {
-                args[i+1] = arguments[i];
+                args[i+3] = arguments[i];
             }
             ProcessBuilder pb = new ProcessBuilder(args);
             pb.directory(context().getFilesDir());
@@ -167,21 +207,92 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
         }
     }
 
+    private class LocalSocketThread extends Thread {
+
+        private final Map<String, String> config;
+        private final LocalSocket socket;
+
+        private LocalSocketThread(Map<String, String> config, LocalSocket socket) {
+            this.config = config;
+            this.socket = socket;
+        }
+
+        private void recvSend(InputStream from, OutputStream to) throws IOException {
+            byte[] head = new byte[4]; // Read it first
+            int headRead = from.read(head);
+            to.write(head);
+            to.flush();
+            long size = 0;
+            for (byte h : head) {
+                size = (size << 8) + h;
+            }
+            long bytes = 4;
+            byte[] buffer = new byte[1024];
+            logger.d("Will transfer:", size, head[0], head[1], head[2], head[3], headRead, from.available());
+            while (bytes < size) {
+                int recv = from.read(buffer);
+                logger.d("Actually get:", recv);
+                if (recv == -1) {
+                    return;
+                }
+                to.write(buffer, 0, recv);
+                to.flush();
+                bytes += recv;
+            }
+        }
+
+        @Override
+        public void run() {
+            Socket remoteSocket = null;
+            try {
+                String host = config.get("taskd.server");
+                int lastColon = host.lastIndexOf(":");
+                int port = Integer.parseInt(host.substring(lastColon + 1));
+                host = host.substring(0, lastColon);
+                SSLSocketFactory factory = SSLHelper.tlsSocket(
+                    new FileInputStream(config.get("taskd.ca")),
+                    new FileInputStream(config.get("taskd.certificate")),
+                    new FileInputStream(config.get("taskd.key")));
+                logger.d("Connecting to:", host, port);
+                remoteSocket = factory.createSocket(host, port);
+                InputStream localInput = socket.getInputStream();
+                OutputStream localOutput = socket.getOutputStream();
+                InputStream remoteInput = remoteSocket.getInputStream();
+                OutputStream remoteOutput = remoteSocket.getOutputStream();
+                logger.d("Connected, will read first piece");
+                recvSend(localInput, remoteOutput);
+                recvSend(remoteInput, localOutput);
+                logger.d("Sync success");
+            } catch (Exception e) {
+                logger.e(e, "Failed to transfer data");
+            } finally {
+                if (null != remoteSocket) {
+                    try {
+                        remoteSocket.close();
+                    } catch (IOException e) {
+                    }
+                }
+                try {
+                    socket.close();
+                } catch (IOException e) {
+                }
+            }
+        }
+    }
+
     private LocalServerSocket openLocalSocket(String name) {
         try {
+            final Map<String, String> config = taskSettings("taskd.ca", "taskd.certificate", "taskd.key", "taskd.server");
+            logger.d("Will run with config:", config);
             final LocalServerSocket socket = new LocalServerSocket(name);
             Thread acceptThread = new Thread() {
                 @Override
                 public void run() {
-                    logger.d("Ready to accept connections");
                     while (true) {
                         try {
                             LocalSocket conn = socket.accept();
-                            logger.d("New incoming connection", conn.getRemoteSocketAddress());
-                            byte[] head = new byte[4];
-                            conn.getInputStream().read(head);
-                            logger.d("Head:", head);
-                            conn.close();
+                            logger.d("New incoming connection");
+                            new LocalSocketThread(config, conn).start();
                         } catch (IOException e) {
                             logger.w(e, "Accept failed");
                         }
