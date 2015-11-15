@@ -18,7 +18,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.Socket;
-import java.security.GeneralSecurityException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -78,7 +79,6 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
     private void syncCall() {
         logger.d("Will call sync");
         callTask(outConsumer, errConsumer, "next");
-        // callTask(outConsumer, errConsumer, "rc.color=off", "next");
         callTask(outConsumer, errConsumer, "rc.taskd.socket=" + SYNC_SOCKET, "sync");
     }
 
@@ -219,19 +219,16 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
 
         private void recvSend(InputStream from, OutputStream to) throws IOException {
             byte[] head = new byte[4]; // Read it first
-            int headRead = from.read(head);
+            from.read(head);
             to.write(head);
             to.flush();
-            long size = 0;
-            for (byte h : head) {
-                size = (size << 8) + h;
-            }
+            long size = ByteBuffer.wrap(head, 0, 4).order(ByteOrder.BIG_ENDIAN).getInt();
             long bytes = 4;
             byte[] buffer = new byte[1024];
-            logger.d("Will transfer:", size, head[0], head[1], head[2], head[3], headRead, from.available());
+            logger.d("Will transfer:", size);
             while (bytes < size) {
                 int recv = from.read(buffer);
-                logger.d("Actually get:", recv);
+//                logger.d("Actually get:", recv);
                 if (recv == -1) {
                     return;
                 }
@@ -239,6 +236,7 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
                 to.flush();
                 bytes += recv;
             }
+            logger.d("Transfer done", bytes, size);
         }
 
         @Override
