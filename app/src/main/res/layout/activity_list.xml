@@ -27,6 +27,7 @@
     </LinearLayout>
     <android.support.design.widget.NavigationView
             android:id="@+id/list_navigation"
+            app:menu="@menu/menu_navigation"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_gravity="start">

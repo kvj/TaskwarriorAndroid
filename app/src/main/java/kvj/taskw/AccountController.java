@@ -4,6 +4,7 @@ import android.net.LocalServerSocket;
 import android.net.LocalSocket;
 
 import org.kvj.bravo7.log.Logger;
+import org.kvj.bravo7.util.Listeners;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -16,20 +17,26 @@ import java.io.UnsupportedEncodingException;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.net.ssl.SSLSocketFactory;
 
-import kvj.taskw.Controller;
 import kvj.taskw.sync.SSLHelper;
 
 /**
  * Created by vorobyev on 11/17/15.
  */
 public class AccountController {
+
+    public interface TaskListener {
+        public void onStart();
+        public void onFinish();
+    }
+
+    private Listeners<TaskListener> taskListeners = new Listeners<>();
 
     private static final String SYNC_SOCKET = "taskwarrior.sync.";
     public static final String TASKRC = ".taskrc.android";
@@ -82,7 +89,7 @@ public class AccountController {
     Pattern linePatthern = Pattern.compile("^([A-Za-z0-9\\._]+)\\s+(\\S.*)$");
 
     private Map<String, String> taskSettings(final String... names) {
-        final Map<String, String> result = new HashMap<>();
+        final Map<String, String> result = new LinkedHashMap<>();
         callTask(new StreamConsumer() {
             @Override
             public void eat(String line) {
@@ -99,6 +106,33 @@ public class AccountController {
                 }
             }
         }, errConsumer, "show");
+        return result;
+    }
+
+    abstract private class PatternLineConsumer implements StreamConsumer {
+
+        @Override
+        public void eat(String line) {
+            Matcher m = linePatthern.matcher(line);
+            if (m.find()) {
+                String keyName = m.group(1).trim();
+                String keyValue = m.group(2).trim();
+                eat(keyName, keyValue);
+            }
+        }
+
+        abstract void eat(String key, String value);
+    }
+
+    public Map<String, String> taskReports() {
+        final Map<String, String> result = new LinkedHashMap<>();
+        callTask(new PatternLineConsumer() {
+
+            @Override
+            void eat(String key, String value) {
+                result.put(key, value);
+            }
+        }, errConsumer, "reports");
         return result;
     }
 
@@ -143,6 +177,13 @@ public class AccountController {
     }
 
     private synchronized boolean callTask(StreamConsumer out, StreamConsumer err, String... arguments) {
+        taskListeners.emit(new Listeners.ListenerEmitter<TaskListener>() {
+            @Override
+            public boolean emit(TaskListener listener) {
+                listener.onStart();
+                return true;
+            }
+        });
         try {
             if (null == controller.executable) {
                 throw new RuntimeException("Invalid executable");
@@ -173,6 +214,14 @@ public class AccountController {
         } catch (Exception e) {
             logger.e(e, "Failed to execute task");
             return false;
+        } finally {
+            taskListeners.emit(new Listeners.ListenerEmitter<TaskListener>() {
+                @Override
+                public boolean emit(TaskListener listener) {
+                    listener.onFinish();
+                    return true;
+                }
+            });
         }
     }
 
