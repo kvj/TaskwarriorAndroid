@@ -84,7 +84,7 @@ public class SSLHelper {
         KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
         Certificate cert = loadCertificate(certStream);
         keyStore.load(null);
-        logger.d("Keystore:", cert.getPublicKey().getAlgorithm(), cert.getPublicKey().getFormat());
+//        logger.d("Keystore:", cert.getPublicKey().getAlgorithm(), cert.getPublicKey().getFormat());
         keyStore.setCertificateEntry("certificate", cert);
         keyStore.setKeyEntry("private-key", loadPrivateKey(keyStream), "".toCharArray(), new Certificate[]{cert});
         kmf.init(keyStore, "".toCharArray());
@@ -96,7 +96,7 @@ public class SSLHelper {
         KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
         keyStore.load(null);
         Certificate cert = loadCertificate(stream);
-        logger.d("Truststore:", cert.getPublicKey().getAlgorithm(), cert.getPublicKey().getFormat());
+//        logger.d("Truststore:", cert.getPublicKey().getAlgorithm(), cert.getPublicKey().getFormat());
         keyStore.setCertificateEntry("ca", cert);
         tmf.init(keyStore);
         return tmf;

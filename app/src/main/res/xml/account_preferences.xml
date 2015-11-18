@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceScreen>
+        <EditTextPreference
+                android:key="@string/pref_account_name"
+                android:title="Account name"/>
+    </PreferenceScreen>
+</PreferenceScreen>

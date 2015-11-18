@@ -2,5 +2,8 @@
 <resources>
     <color name="colorPrimary">#3F51B5</color>
     <color name="colorPrimaryDark">#303F9F</color>
+    <color name="colorPrimaryText">#FFF</color>
     <color name="colorAccent">#FF4081</color>
+    <color name="colorTertiary">?android:textColorTertiary</color>
+    <color name="colorText">?android:textColorPrimary</color>
 </resources>

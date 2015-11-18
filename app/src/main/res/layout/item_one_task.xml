@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:orientation="vertical"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content">
+    <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+        <FrameLayout
+                android:layout_margin="3dp"
+                android:layout_width="5dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0">
+            <View
+                    android:background="@color/colorAccent"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"/>
+        </FrameLayout>
+        <FrameLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1">
+            <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+                <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+                    <ImageButton
+                            android:id="@+id/task_status_btn"
+                            style="@style/IconButton"
+                            android:layout_gravity="top"
+                            android:src="@drawable/ic_status_pending"/>
+                    <TextView
+                            android:id="@+id/task_description"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:textAppearance="@style/TextAppearance.AppCompat.Large"
+                            android:text="Task description"
+                            android:layout_gravity="center_vertical"
+                            android:layout_weight="1"/>
+                </LinearLayout>
+                <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:minHeight="30dp" android:baselineAligned="false">
+                    <LinearLayout android:layout_width="0dp"
+                                  android:layout_weight="0.5"
+                                  android:orientation="vertical"
+                                  android:id="@+id/task_labels_left"
+                                  android:layout_height="wrap_content">
+                        <!--<include layout="@layout/item_one_label_left"/>-->
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp"
+                                  android:layout_weight="0.5"
+                                  android:orientation="vertical"
+                                  android:id="@+id/task_labels_right"
+                                  android:layout_height="wrap_content">
+                        <!--<include layout="@layout/item_one_label_right"/>-->
+                    </LinearLayout>
+                </LinearLayout>
+                <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+                    <android.widget.Space
+                            android:layout_weight="1"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"/>
+                    <LinearLayout
+                            android:id="@+id/task_bottom_btns"
+                            android:layout_width="wrap_content"
+                            android:layout_height="match_parent"
+                            android:orientation="horizontal">
+                        <ImageButton
+                                style="@style/IconButton"
+                                android:src="@drawable/ic_action_sync"/>
+                    </LinearLayout>
+                    <ImageButton
+                            android:id="@+id/task_more_btn"
+                            style="@style/IconButton"
+                            android:layout_gravity="top"
+                            android:src="@drawable/ic_action_more"/>
+                </LinearLayout>
+            </LinearLayout>
+        </FrameLayout>
+        <FrameLayout
+                android:layout_margin="3dp"
+                android:layout_width="5dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0">
+            <View
+                    android:background="@color/colorAccent"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"/>
+        </FrameLayout>
+    </LinearLayout>
+</LinearLayout>

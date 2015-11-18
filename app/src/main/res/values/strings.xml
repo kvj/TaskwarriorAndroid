@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">TaskwarriorAndroid</string>
+    <string name="app_account_type">kvj.task.account</string>
+    <string name="pref_account_name">pref_account_name</string>
 </resources>
