@@ -5,4 +5,5 @@
         </menu>
     </item>
     <item android:id="@+id/menu_nav_settings" android:title="Settings"/>
+    <item android:id="@+id/menu_nav_reload" android:title="Reload"/>
 </menu>

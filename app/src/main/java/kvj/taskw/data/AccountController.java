@@ -1,8 +1,10 @@
-package kvj.taskw;
+package kvj.taskw.data;
 
 import android.net.LocalServerSocket;
 import android.net.LocalSocket;
+import android.text.TextUtils;
 
+import org.json.JSONObject;
 import org.kvj.bravo7.log.Logger;
 import org.kvj.bravo7.util.Listeners;
 
@@ -17,7 +19,9 @@ import java.io.UnsupportedEncodingException;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -134,6 +138,42 @@ public class AccountController {
             }
         }, errConsumer, "reports");
         return result;
+    }
+
+    public ReportInfo taskReportInfo(String name) {
+        final ReportInfo info = new ReportInfo();
+        callTask(new PatternLineConsumer() {
+
+            @Override
+            void eat(String key, String value) {
+                if (key.endsWith(".columns")) {
+                    String[] parts = value.split(",");
+                    for (String p : parts) {
+                        String name = p;
+                        String type = "";
+                        if (p.contains(".")) {
+                            name = p.substring(0, p.indexOf("."));
+                            type = p.substring(p.indexOf(".")+1);
+                        }
+                        info.fields.put(name, type);
+                    }
+                }
+                if (key.endsWith(".sort")) {
+                    String[] parts = value.split(",");
+                    for (String p : parts) {
+                        if (p.endsWith("/")) p = p.substring(0, p.length()-1);
+                        info.sort.put(p.substring(0, p.length()-1), p.charAt(p.length()-1) == '+');
+                    }
+                }
+                if (key.endsWith(".filter")) {
+                    info.query = value;
+                }
+                if (key.endsWith(".description")) {
+                    info.description = value;
+                }
+            }
+        }, errConsumer, "show", String.format("report.%s", name));
+        return info;
     }
 
     private Thread readStream(InputStream stream, final StreamConsumer consumer) {
@@ -326,6 +366,23 @@ public class AccountController {
             logger.e(e, "Failed to open local socket");
         }
         return null;
+    }
+
+    public List<JSONObject> taskList(String query) {
+        final List<JSONObject> result = new ArrayList<>();
+        callTask(new StreamConsumer() {
+            @Override
+            public void eat(String line) {
+                if (!TextUtils.isEmpty(line)) {
+                    try {
+                        result.add(new JSONObject(line));
+                    } catch (Exception e) {
+                        logger.e(e, "Not JSON object:", line);
+                    }
+                }
+            }
+        }, errConsumer, "rc.json.array=off", "export", query);
+        return result;
     }
 
 }

@@ -1,4 +1,4 @@
-package kvj.taskw;
+package kvj.taskw.data;
 
 import android.accounts.Account;
 import android.accounts.AccountManager;
@@ -15,6 +15,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
+
+import kvj.taskw.App;
+import kvj.taskw.R;
 
 /**
  * Created by vorobyev on 10/4/15.

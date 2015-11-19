@@ -15,7 +15,7 @@
             android:label="@string/app_name"
             android:supportsRtl="true"
             android:theme="@style/AppTheme" >
-        <activity android:name=".MainActivity" >
+        <activity android:name=".ui.MainActivity" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -23,12 +23,12 @@
             </intent-filter>
         </activity>
         <activity
-                android:name=".AccountAuthenticator$AccountAddDialog"
+                android:name=".account.AccountAuthenticator$AccountAddDialog"
                 android:theme="@style/Theme.AppCompat.Dialog.Alert" android:excludeFromRecents="true">
 
         </activity>
         <service
-                android:name=".AccountAuthenticator$Service"
+                android:name=".account.AccountAuthenticator$Service"
                 android:exported="true">
             <intent-filter>
                 <action android:name="android.accounts.AccountAuthenticator" />

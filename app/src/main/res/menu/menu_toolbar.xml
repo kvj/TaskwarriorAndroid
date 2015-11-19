@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item android:id="@+id/menu_tb_sync" android:title="Sync" android:icon="@drawable/ic_action_sync" app:showAsAction="ifRoom"></item>
+    <item android:id="@+id/menu_tb_reload" android:title="Reload" android:icon="@drawable/ic_action_refresh" app:showAsAction="ifRoom"></item>
+</menu>
