@@ -1,8 +1,8 @@
 package kvj.taskw.data;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -18,6 +18,7 @@ public class ReportInfo {
     public Map<String, String> fields = new LinkedHashMap<>();
     public String query = "";
     public String description = "Untitled";
+    public List<String> priorities = new ArrayList<>();
 
     @Override
     public String toString() {
@@ -41,10 +42,11 @@ public class ReportInfo {
                         continue;
                     }
                     if (lo instanceof Number) {
-                        int result = ((Integer)lo).compareTo((Integer) ro);
-                        if (result == 0)
+                        double ld = ((Number)lo).doubleValue();
+                        double rd = ((Number)ro).doubleValue();
+                        if (ld == rd)
                             continue;
-                        return result;
+                        return (ld > rd? 1: -1) * (entry.getValue()? 1: -1);
                     }
                     if (lo instanceof String) {
                         int result = ((String)lo).compareTo((String) ro);

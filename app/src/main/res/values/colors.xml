@@ -4,6 +4,6 @@
     <color name="colorPrimaryDark">#303F9F</color>
     <color name="colorPrimaryText">#FFF</color>
     <color name="colorAccent">#FF4081</color>
-    <color name="colorTertiary">?android:textColorTertiary</color>
-    <color name="colorText">?android:textColorPrimary</color>
+    <color name="colorTertiary">#444444</color>
+    <color name="colorText">#222222</color>
 </resources>

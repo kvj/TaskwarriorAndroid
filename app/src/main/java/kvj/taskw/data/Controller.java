@@ -61,7 +61,7 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
     }
 
     public String currentAccount() {
-        Account[] accounts = accountManager.getAccounts();
+        Account[] accounts = accountManager.getAccountsByType(App.ACCOUNT_TYPE);
         if (accounts.length == 0) {
             return null;
         }
@@ -80,7 +80,7 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
     }
 
     public boolean hasAccount(String text) {
-        for (Account acc : accountManager.getAccounts()) {
+        for (Account acc : accountManager.getAccountsByType(App.ACCOUNT_TYPE)) {
             if (acc.name.equalsIgnoreCase(text)) {
                 return true;
             }
@@ -111,7 +111,7 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
                     return false;
                 }
             }
-            if (!accountManager.addAccountExplicitly(new Account(name, accountType()), "", new Bundle())) {
+            if (!accountManager.addAccountExplicitly(new Account(name, App.ACCOUNT_TYPE), "", new Bundle())) {
                 logger.w("Failed to create account", name);
                 return false;
             }
@@ -119,10 +119,6 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
         } catch (Exception e) {
             return false;
         }
-    }
-
-    public String accountType() {
-        return context.getString(R.string.app_account_type);
     }
 
     public synchronized AccountController accountController(String name) {

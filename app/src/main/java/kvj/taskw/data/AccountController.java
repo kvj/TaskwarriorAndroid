@@ -1,9 +1,11 @@
 package kvj.taskw.data;
 
+import android.content.Intent;
 import android.net.LocalServerSocket;
 import android.net.LocalSocket;
 import android.text.TextUtils;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.kvj.bravo7.log.Logger;
 import org.kvj.bravo7.util.Listeners;
@@ -20,6 +22,7 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +31,9 @@ import java.util.regex.Pattern;
 
 import javax.net.ssl.SSLSocketFactory;
 
+import kvj.taskw.App;
 import kvj.taskw.sync.SSLHelper;
+import kvj.taskw.ui.MainListAdapter;
 
 /**
  * Created by vorobyev on 11/17/15.
@@ -40,13 +45,22 @@ public class AccountController {
         public void onFinish();
     }
 
-    private Listeners<TaskListener> taskListeners = new Listeners<>();
+    private Listeners<TaskListener> taskListeners = new Listeners<TaskListener>() {
+        @Override
+        protected void onAdd(TaskListener listener) {
+            super.onAdd(listener);
+            if (active) { // Run onStart
+                listener.onStart();
+            }
+        }
+    };
 
     private static final String SYNC_SOCKET = "taskwarrior.sync.";
     public static final String TASKRC = ".taskrc.android";
     public static final String DATA_FOLDER = "data";
     private final Controller controller;
     private final String name;
+    private boolean active = false;
 
     Logger logger = Logger.forInstance(this);
 
@@ -83,11 +97,32 @@ public class AccountController {
         syncSocket = openLocalSocket(SYNC_SOCKET+this.name);
     }
 
-    public boolean callSync() {
-        if (null == syncSocket) {
-            return false;
+    private class StringAggregator implements StreamConsumer {
+
+        StringBuilder builder = new StringBuilder();
+
+        @Override
+        public void eat(String line) {
+            if (builder.length() > 0) {
+                builder.append('\n');
+            }
+            builder.append(line);
         }
-        return callTask(outConsumer, errConsumer, "rc.taskd.socket=" + SYNC_SOCKET + name, "sync");
+
+        private String text() {
+            return builder.toString();
+        }
+    }
+
+    public String callSync() {
+        if (null == syncSocket) {
+            return "Sync not configured";
+        }
+        StringAggregator err = new StringAggregator();
+        StringAggregator out = new StringAggregator();
+        boolean result = callTask(out, err, "rc.taskd.socket=" + SYNC_SOCKET + name, "sync");
+        logger.d("Sync result:", result, "ERR:", err.text(), "OUT:", out.text());
+        return result? null: err.text();
     }
 
     Pattern linePatthern = Pattern.compile("^([A-Za-z0-9\\._]+)\\s+(\\S.*)$");
@@ -173,7 +208,24 @@ public class AccountController {
                 }
             }
         }, errConsumer, "show", String.format("report.%s", name));
+        info.priorities = taskPriority();
         return info;
+    }
+
+    public List<String> taskPriority() {
+        // Get all priorities
+        final List<String> result = new ArrayList<>();
+        callTask(new PatternLineConsumer() {
+
+            @Override
+            void eat(String key, String value) {
+                for (String p : value.split(",")) { // Split by ,
+                    result.add(p);
+                }
+                logger.d("Parsed priority:", value, result);
+            }
+        }, errConsumer, "show", "uda.priority.values");
+        return result;
     }
 
     private Thread readStream(InputStream stream, final StreamConsumer consumer) {
@@ -217,6 +269,7 @@ public class AccountController {
     }
 
     private synchronized boolean callTask(StreamConsumer out, StreamConsumer err, String... arguments) {
+        active = true;
         taskListeners.emit(new Listeners.ListenerEmitter<TaskListener>() {
             @Override
             public boolean emit(TaskListener listener) {
@@ -231,19 +284,17 @@ public class AccountController {
             if (null == tasksFolder) {
                 throw new RuntimeException("Invalid folder");
             }
-            String[] args = new String[arguments.length+3];
-            args[0] = controller.executable;
-            args[1] = "rc.color=off";
-            args[2] = "rc.verbose=nothing";
-            for (int i = 0; i < arguments.length; i++) {
-                args[i+3] = arguments[i];
-            }
+            List<String> args = new ArrayList<>();
+            args.add(controller.executable);
+            args.add("rc.color=off");
+            args.add("rc.verbose=nothing");
+            Collections.addAll(args, arguments);
             ProcessBuilder pb = new ProcessBuilder(args);
             pb.directory(controller.context().getFilesDir());
             pb.environment().put("TASKRC", new File(tasksFolder, TASKRC).getAbsolutePath());
             pb.environment().put("TASKDATA", new File(tasksFolder, DATA_FOLDER).getAbsolutePath());
             Process p = pb.start();
-            logger.d("Calling now:", controller.executable, tasksFolder, arguments.length);
+            logger.d("Calling now:", tasksFolder, args);
             Thread outThread = readStream(p.getInputStream(), out);
             Thread errThread = readStream(p.getErrorStream(), err);
             int exitCode = p.waitFor();
@@ -262,6 +313,7 @@ public class AccountController {
                     return true;
                 }
             });
+            active = false;
         }
     }
 
@@ -370,6 +422,13 @@ public class AccountController {
 
     public List<JSONObject> taskList(String query) {
         final List<JSONObject> result = new ArrayList<>();
+        List<String> params = new ArrayList<>();
+        params.add("rc.json.array=off");
+        params.add("export");
+//        params.add(escape(query));
+        for (String part : query.split(" ")) { // Split by space and add to list
+            params.add(escape(part));
+        }
         callTask(new StreamConsumer() {
             @Override
             public void eat(String line) {
@@ -381,8 +440,72 @@ public class AccountController {
                     }
                 }
             }
-        }, errConsumer, "rc.json.array=off", "export", query);
+        }, errConsumer, params.toArray(new String[0]));
+        logger.d("List for:", query, result.size());
         return result;
     }
 
+    private String escape(String query) {
+        return query.replace(" ", "\\ ").replace("(", "\\(").replace(")", "\\)");
+    }
+
+    public boolean intentForEditor(Intent intent, String uuid) {
+        intent.putExtra(App.KEY_ACCOUNT, name);
+        if (TextUtils.isEmpty(uuid)) { // Done - new item
+            return true;
+        }
+        List<JSONObject> jsons = taskList(uuid);
+        if (jsons.isEmpty()) { // Failed
+            return false;
+        }
+        JSONObject json = jsons.get(0);
+        intent.putExtra(App.KEY_EDIT_UUID, json.optString("uuid"));
+        intent.putExtra(App.KEY_EDIT_DESCRIPTION, json.optString("description"));
+        intent.putExtra(App.KEY_EDIT_PROJECT, json.optString("project"));
+        JSONArray tags = json.optJSONArray("tags");
+        if (null != tags) {
+            intent.putExtra(App.KEY_EDIT_TAGS, MainListAdapter.join(" ", MainListAdapter.array2List(tags)));
+        }
+        intent.putExtra(App.KEY_EDIT_DUE, MainListAdapter.asDate(json.optString("due"), ""));
+        intent.putExtra(App.KEY_EDIT_WAIT, MainListAdapter.asDate(json.optString("wait"), ""));
+        intent.putExtra(App.KEY_EDIT_SCHEDULED, MainListAdapter.asDate(json.optString("scheduled"), ""));
+        intent.putExtra(App.KEY_EDIT_UNTIL, MainListAdapter.asDate(json.optString("until"), ""));
+        intent.putExtra(App.KEY_EDIT_RECUR, json.optString("recur"));
+        return true;
+    }
+
+    public String taskAdd(List<String> changes) {
+        List<String> params = new ArrayList<>();
+        params.add("add");
+        for (String change : changes) { // Copy non-empty
+            if (!TextUtils.isEmpty(change)) {
+                params.add(change);
+            }
+        }
+        StringAggregator err = new StringAggregator();
+        if (!callTask(outConsumer, err, params.toArray(new String[0]))) { // Failure
+            return err.text();
+        }
+        return null; // Success
+    }
+
+    public String taskModify(String uuid, List<String> changes) {
+        List<String> params = new ArrayList<>();
+        params.add(uuid);
+        params.add("modify");
+        for (String change : changes) { // Copy non-empty
+            if (!TextUtils.isEmpty(change)) {
+                params.add(change);
+            }
+        }
+        StringAggregator err = new StringAggregator();
+        if (!callTask(outConsumer, err, params.toArray(new String[0]))) { // Failure
+            return err.text();
+        }
+        return null; // Success
+    }
+
+    public Listeners<TaskListener> listeners() {
+        return taskListeners;
+    }
 }

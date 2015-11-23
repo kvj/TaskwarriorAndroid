@@ -4,17 +4,17 @@
               android:layout_width="match_parent"
               android:layout_height="wrap_content">
     <TextView
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:textAppearance="@style/TextAppearance.AppCompat.Small"
-            android:textAlignment="textEnd"
-            android:text="Some label"/>
-    <ImageView
-            android:layout_gravity="top"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_weight="0"
-            android:src="@drawable/ic_label_due"/>
+        android:id="@+id/label_text"
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end"
+        android:textAppearance="@style/TextAppearance.AppCompat.Small"
+        android:textAlignment="textEnd"
+        android:text="Some label"/>
+    <android.widget.ImageView
+        android:id="@+id/label_icon"
+        style="@style/LabelIcon"
+        android:layout_weight="0"
+        android:src="@drawable/ic_label_due"/>
 </LinearLayout>

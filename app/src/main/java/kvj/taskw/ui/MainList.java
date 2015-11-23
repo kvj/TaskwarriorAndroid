@@ -84,6 +84,11 @@ public class MainList extends Fragment {
 
     }
 
+    public void listener(MainListAdapter.ItemListener listener) {
+        adapter.listener(listener);
+    }
+
+
     public ReportInfo reportInfo() {
         return info;
     }

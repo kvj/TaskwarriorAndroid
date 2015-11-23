@@ -19,12 +19,31 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_weight="0"/>
-        <fragment
-                android:id="@+id/list_list_fragment"
+            <RelativeLayout
                 android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                class="kvj.taskw.ui.MainList"/>
+                android:layout_height="0dp" android:layout_weight="1">
+                <fragment
+                    android:id="@+id/list_list_fragment"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    class="kvj.taskw.ui.MainList"/>
+                <android.support.design.widget.FloatingActionButton
+                    android:id="@+id/list_add_btn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="16dp"
+                    android:src="@drawable/ic_action_add"
+                    android:layout_alignParentBottom="true"
+                    android:layout_alignParentRight="true"/>
+                <ProgressBar
+                    style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+                    android:id="@+id/list_progress"
+                    android:visibility="gone"
+                    android:layout_alignParentTop="true"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:indeterminate="true"/>
+            </RelativeLayout>
     </LinearLayout>
     <android.support.design.widget.NavigationView
             android:id="@+id/list_navigation"

@@ -1,16 +1,20 @@
 package kvj.taskw.ui;
 
+import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
+import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.SubMenu;
 import android.view.View;
+import android.widget.ProgressBar;
 
+import org.json.JSONObject;
 import org.kvj.bravo7.form.FormController;
 import org.kvj.bravo7.form.impl.bundle.StringBundleAdapter;
 import org.kvj.bravo7.form.impl.widget.TransientAdapter;
@@ -21,6 +25,7 @@ import java.util.Map;
 
 import kvj.taskw.App;
 import kvj.taskw.R;
+import kvj.taskw.data.AccountController;
 import kvj.taskw.data.Controller;
 
 public class MainActivity extends AppCompatActivity {
@@ -40,6 +45,9 @@ public class MainActivity extends AppCompatActivity {
             if (null != toolbar) toolbar.setSubtitle(list.reportInfo().description);
         }
     };
+    private FloatingActionButton addButton = null;
+    private ProgressBar progressBar = null;
+    private AccountController.TaskListener progressListener = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,12 +57,69 @@ public class MainActivity extends AppCompatActivity {
         navigationDrawer = (DrawerLayout) findViewById(R.id.list_navigation_drawer);
         navigation = (NavigationView) findViewById(R.id.list_navigation);
         list = (MainList) getSupportFragmentManager().findFragmentById(R.id.list_list_fragment);
+        addButton = (FloatingActionButton) findViewById(R.id.list_add_btn);
+        progressBar = (ProgressBar) findViewById(R.id.list_progress);
         setSupportActionBar(toolbar);
         toolbar.setNavigationIcon(getDrawerToggleDelegate().getThemeUpIndicator());
+        list.listener(new MainListAdapter.ItemListener() {
+            @Override
+            public void onEdit(JSONObject json) {
+                // Start editor
+                edit(json);
+            }
+        });
+        addButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                add();
+            }
+        });
+        progressListener = MainActivity.setupProgressListener(this, progressBar);
         form.add(new TransientAdapter<>(new StringBundleAdapter(), null), App.KEY_ACCOUNT);
         form.add(new TransientAdapter<>(new StringBundleAdapter(), null), App.KEY_REPORT);
         form.add(new TransientAdapter<>(new StringBundleAdapter(), null), App.KEY_QUERY);
         form.load(this, savedInstanceState);
+    }
+
+    private static AccountController.TaskListener setupProgressListener(final Activity activity, final View bar) {
+        return new AccountController.TaskListener() {
+            @Override
+            public void onStart() {
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        bar.setVisibility(View.VISIBLE);
+                    }
+                });
+            }
+
+            @Override
+            public void onFinish() {
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        bar.setVisibility(View.GONE);
+                    }
+                });
+            }
+        };
+    }
+
+    private void add() {
+        Intent intent = new Intent(this, EditorActivity.class);
+        final String account = form.getValue(App.KEY_ACCOUNT);
+        controller.accountController(account).intentForEditor(intent, null);
+        startActivityForResult(intent, RESULT_OK);
+    }
+
+    private void edit(JSONObject json) {
+        Intent intent = new Intent(this, EditorActivity.class);
+        final String account = form.getValue(App.KEY_ACCOUNT);
+        if (controller.accountController(account).intentForEditor(intent, json.optString("uuid"))) { //
+            startActivityForResult(intent, RESULT_OK);
+        } else {
+            controller.messageShort("Invalid task");
+        }
     }
 
     @Override
@@ -72,7 +137,23 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        checkAccount();
+        addButton.setEnabled(false);
+        if (checkAccount()) {
+            addButton.setEnabled(true);
+            accountController().listeners().add(progressListener);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (null != accountController()) {
+            accountController().listeners().remove(progressListener);
+        }
+        super.onDestroy();
+    }
+
+    private AccountController accountController() {
+        return controller.accountController(form.getValue(App.KEY_ACCOUNT, String.class));
     }
 
     private boolean checkAccount() {
@@ -113,7 +194,8 @@ public class MainActivity extends AppCompatActivity {
                     // Report mode
                     String report = form.getValue(App.KEY_REPORT);
                     if (null == report || !result.containsKey(report)) {
-                        report = result.keySet().iterator().next(); // First item
+//                        report = result.keySet().iterator().next(); // First item
+                        report = "next";
                     }
                     form.setValue(App.KEY_REPORT, report);
                 }
@@ -140,9 +222,40 @@ public class MainActivity extends AppCompatActivity {
         switch (item.getItemId()) {
             case R.id.menu_tb_reload:
                 list.reload();
+                break;
             case R.id.menu_tb_sync:
-                list.reload();
+                sync();
+                break;
         }
         return true;
+    }
+
+    private void sync() {
+        final String account = form.getValue(App.KEY_ACCOUNT);
+        if (null != account) { // Do sync
+            new Tasks.ActivitySimpleTask<String>(this){
+
+                @Override
+                protected String doInBackground() {
+                    return controller.accountController(account).callSync();
+                }
+
+                @Override
+                public void finish(String result) {
+                    if (null != result) { // Error
+                        controller.messageLong(result);
+                    } else {
+                        controller.messageShort("Sync success");
+                        list.reload();
+                    }
+                }
+            }.exec();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        list.reload(); // Reload after edit
     }
 }

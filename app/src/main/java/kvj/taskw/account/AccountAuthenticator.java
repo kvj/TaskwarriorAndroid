@@ -146,7 +146,7 @@ public class AccountAuthenticator extends AbstractAccountAuthenticator {
                         mResultBundle = new Bundle();
                         mResultBundle.putString(AccountManager.KEY_ACCOUNT_NAME, name);
                         mResultBundle
-                            .putString(AccountManager.KEY_ACCOUNT_TYPE, controller.accountType());
+                            .putString(AccountManager.KEY_ACCOUNT_TYPE, App.ACCOUNT_TYPE);
                         finish();
                     } else {
                         controller.messageShort("Failed to create account");

@@ -3,11 +3,13 @@
               android:orientation="horizontal"
               android:layout_width="match_parent"
               android:layout_height="wrap_content">
-    <ImageView
+    <android.widget.ImageView
+        android:id="@+id/label_icon"
             style="@style/LabelIcon"
             android:layout_weight="0"
             android:src="@drawable/ic_label_due"/>
     <TextView
+        android:id="@+id/label_text"
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
