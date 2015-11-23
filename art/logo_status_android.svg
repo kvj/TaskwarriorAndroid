@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="192"
+   height="192"
+   viewBox="0 0 192 192"
+   id="svg7836"
+   version="1.1"
+   inkscape:version="0.91 r13725"
+   sodipodi:docname="logo_status_android.svg"
+   inkscape:export-filename="/Users/kvorobyev/Dev/TaskwarriorAndroid/art/logo_status_512.png"
+   inkscape:export-xdpi="240"
+   inkscape:export-ydpi="240">
+  <defs
+     id="defs7838" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="2.8"
+     inkscape:cx="67.096062"
+     inkscape:cy="100.0469"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     units="px"
+     inkscape:window-width="1440"
+     inkscape:window-height="801"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1" />
+  <metadata
+     id="metadata7841">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-860.36216)">
+    <path
+       style="display:inline;fill:#737373;fill-opacity:1"
+       d="m 80.764684,1006.0766 0,-38.02865 c -9.304264,-6.97039 -18.660268,-13.87273 -27.903807,-20.92334 -7.590756,-16.45627 10.315445,-8.02185 19.910017,-7.25508 11.842859,2.48233 24.070872,3.74183 35.955576,0.74784 8.60227,-1.41281 17.18715,-2.94653 25.81972,-4.16345 1.39628,10.72785 -7.44543,15.68424 -15.29374,20.78192 -5.71588,5.65631 -17.85911,8.21966 -14.92529,18.28486 l 0,68.5744 c 19.26081,-6.8723 34.72206,-21.0225 48.87698,-35.3141 -6.91868,-19.14858 -12.34152,-39.39851 -11.0566,-59.91649 -0.0671,-8.9502 6.64713,-16.47904 5.46417,-25.57611 0.6898,-12.98301 -3.35463,-26.42844 -11.19807,-36.80824 -8.49122,-11.17422 -22.08593,-17.47355 -35.86178,-18.73597 -9.483444,0.11485 -19.113573,-0.88472 -28.144963,2.66516 -15.836303,4.95543 -27.693968,19.03054 -31.596469,34.96207 -3.148466,10.75803 -4.616385,22.93953 0.718748,33.24831 6.392165,19.66432 -0.09155,40.65334 -5.312825,59.82717 -6.881439,8.781 -0.661987,14.906 6.273639,20.1933 11.281677,10.3572 23.685223,19.9509 38.119594,25.4582 0.197766,-12.6724 0.125492,-25.3481 0.155102,-38.0218 z"
+       id="path7066"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccccccccccccccccccccc" />
+  </g>
+</svg>
