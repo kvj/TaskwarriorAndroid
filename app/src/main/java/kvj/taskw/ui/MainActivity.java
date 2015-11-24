@@ -306,7 +306,7 @@ public class MainActivity extends AppCompatActivity {
 
                 @Override
                 protected String doInBackground() {
-                    return controller.accountController(account).callSync();
+                    return controller.accountController(account).taskSync();
                 }
 
                 @Override

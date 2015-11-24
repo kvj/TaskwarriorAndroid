@@ -3,13 +3,13 @@ package kvj.taskw.data;
 import android.content.Intent;
 import android.net.LocalServerSocket;
 import android.net.LocalSocket;
+import android.support.v4.app.NotificationCompat;
 import android.text.TextUtils;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.kvj.bravo7.log.Logger;
 import org.kvj.bravo7.util.Listeners;
-import org.w3c.dom.Text;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -118,15 +118,33 @@ public class AccountController {
         }
     }
 
-    public String callSync() {
-        if (null == syncSocket) {
-            return "Sync not configured";
-        }
+    public String taskSync() {
+        NotificationCompat.Builder n = controller.newNotification(accountName);
+        n.setOnlyAlertOnce(true);
+        n.setOngoing(true);
+        n.setContentText("Sync is in progress");
+        n.setPriority(NotificationCompat.PRIORITY_DEFAULT);
+        controller.notify(Controller.NotificationType.Sync, accountName, n);
         StringAggregator err = new StringAggregator();
         StringAggregator out = new StringAggregator();
         boolean result = callTask(out, err, "rc.taskd.socket=" + SYNC_SOCKET + name, "sync");
         logger.d("Sync result:", result, "ERR:", err.text(), "OUT:", out.text());
-        return result? null: err.text();
+        n = controller.newNotification(accountName);
+        n.setOngoing(false);
+        if (result) { // Success
+            n.setContentText("Sync complete");
+            n.setPriority(NotificationCompat.PRIORITY_MIN);
+            controller.notify(Controller.NotificationType.Sync, accountName, n);
+            return null;
+        } else {
+            String error = err.text();
+            n.setOnlyAlertOnce(true);
+            n.setContentText("Sync failed");
+            n.setSubText(error);
+            n.setPriority(NotificationCompat.PRIORITY_DEFAULT);
+            controller.notify(Controller.NotificationType.Sync, accountName, n);
+            return error;
+        }
     }
 
     Pattern linePatthern = Pattern.compile("^([A-Za-z0-9\\._]+)\\s+(\\S.*)$");

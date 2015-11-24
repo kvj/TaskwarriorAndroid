@@ -5,9 +5,12 @@ import android.accounts.AccountManager;
 import android.accounts.AccountManagerCallback;
 import android.accounts.AccountManagerFuture;
 import android.app.Activity;
+import android.app.Notification;
 import android.content.Context;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.NotificationManagerCompat;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -28,11 +31,13 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
     private final AccountManager accountManager;
 
     private final Map<String, AccountController> controllerMap = new HashMap<>();
+    private final NotificationManagerCompat notificationManager;
 
     public Controller(Context context, String name) {
         super(context, name);
         accountManager = AccountManager.get(context);
         executable = eabiExecutable();
+        notificationManager = NotificationManagerCompat.from(context);
     }
 
     private enum Arch {Arm7, X86};
@@ -141,6 +146,33 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
             controllerMap.put(name, new AccountController(this, name));
         }
         return controllerMap.get(name);
+    }
+
+    public enum NotificationType {
+        Sync(1),;
+
+        private final int id;
+
+        NotificationType(int id) {
+            this.id = id;
+        }
+    }
+
+    public void notify(NotificationType type, String account, NotificationCompat.Builder n) {
+        Notification nn = n.build();
+        notificationManager.notify(account, type.id, nn);
+    }
+
+    public void cancelNotification(NotificationType type, String account) {
+        notificationManager.cancel(account, type.id);
+    }
+
+    public NotificationCompat.Builder newNotification(String account) {
+        NotificationCompat.Builder n = new NotificationCompat.Builder(context);
+        n.setContentTitle(account);
+        n.setSmallIcon(R.drawable.ic_stat_logo);
+        n.setWhen(System.currentTimeMillis());
+        return n;
     }
 
 }
