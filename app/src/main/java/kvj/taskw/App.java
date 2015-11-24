@@ -21,6 +21,8 @@ public class App extends org.kvj.bravo7.ng.App<Controller> {
     public static final String KEY_EDIT_SCHEDULED = "editor_scheduled";
     public static final String KEY_EDIT_RECUR = "editor_recur";
     public static final String KEY_EDIT_UNTIL = "editor_until";
+    public static final int EDIT_REQUEST = 1;
+    public static final String KEY_EDIT_PRIORITY = "editor_priority";
 
     @Override
     protected Controller create() {

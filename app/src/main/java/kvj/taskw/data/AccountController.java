@@ -9,6 +9,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.kvj.bravo7.log.Logger;
 import org.kvj.bravo7.util.Listeners;
+import org.w3c.dom.Text;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -39,6 +40,8 @@ import kvj.taskw.ui.MainListAdapter;
  * Created by vorobyev on 11/17/15.
  */
 public class AccountController {
+
+    private final String accountName;
 
     public interface TaskListener {
         public void onStart();
@@ -92,6 +95,7 @@ public class AccountController {
 
     public AccountController(Controller controller, String name) {
         this.controller = controller;
+        this.accountName = name;
         this.name = name.toLowerCase();
         tasksFolder = initTasksFolder();
         syncSocket = openLocalSocket(SYNC_SOCKET+this.name);
@@ -175,6 +179,20 @@ public class AccountController {
         return result;
     }
 
+    public static List<String> split2(String src, String sep) {
+        List<String> result = new ArrayList<>();
+        int start = 0;
+        while (true) {
+            int index = src.indexOf(sep, start);
+            if (index == -1) {
+                result.add(src.substring(start));
+                return result;
+            }
+            result.add(src.substring(start, index));
+            start = index+sep.length();
+        }
+    }
+
     public ReportInfo taskReportInfo(String name) {
         final ReportInfo info = new ReportInfo();
         callTask(new PatternLineConsumer() {
@@ -219,9 +237,7 @@ public class AccountController {
 
             @Override
             void eat(String key, String value) {
-                for (String p : value.split(",")) { // Split by ,
-                    result.add(p);
-                }
+                result.addAll(split2(value, ","));
                 logger.d("Parsed priority:", value, result);
             }
         }, errConsumer, "show", "uda.priority.values");
@@ -287,6 +303,7 @@ public class AccountController {
             List<String> args = new ArrayList<>();
             args.add(controller.executable);
             args.add("rc.color=off");
+            args.add("rc.confirmation=off");
             args.add("rc.verbose=nothing");
             Collections.addAll(args, arguments);
             ProcessBuilder pb = new ProcessBuilder(args);
@@ -421,14 +438,16 @@ public class AccountController {
     }
 
     public List<JSONObject> taskList(String query) {
+        if (TextUtils.isEmpty(query)) {
+            query = "status:pending";
+        } else {
+            query = String.format("(%s)", query);
+        }
         final List<JSONObject> result = new ArrayList<>();
         List<String> params = new ArrayList<>();
         params.add("rc.json.array=off");
         params.add("export");
-//        params.add(escape(query));
-        for (String part : query.split(" ")) { // Split by space and add to list
-            params.add(escape(part));
-        }
+        params.add(escape(query));
         callTask(new StreamConsumer() {
             @Override
             public void eat(String line) {
@@ -445,13 +464,15 @@ public class AccountController {
         return result;
     }
 
-    private String escape(String query) {
-        return query.replace(" ", "\\ ").replace("(", "\\(").replace(")", "\\)");
+    public static String escape(String query) {
+        return query.replace(" ", "\\ "); //.replace("(", "\\(").replace(")", "\\)");
     }
 
     public boolean intentForEditor(Intent intent, String uuid) {
-        intent.putExtra(App.KEY_ACCOUNT, name);
+        intent.putExtra(App.KEY_ACCOUNT, accountName);
+        List<String> priorities = taskPriority();
         if (TextUtils.isEmpty(uuid)) { // Done - new item
+            intent.putExtra(App.KEY_EDIT_PRIORITY, priorities.indexOf(""));
             return true;
         }
         List<JSONObject> jsons = taskList(uuid);
@@ -459,6 +480,11 @@ public class AccountController {
             return false;
         }
         JSONObject json = jsons.get(0);
+        int priorityIndex = priorities.indexOf(json.optString("priority", ""));
+        if (-1 == priorityIndex) {
+            priorityIndex = priorities.indexOf("");
+        }
+        intent.putExtra(App.KEY_EDIT_PRIORITY, priorityIndex);
         intent.putExtra(App.KEY_EDIT_UUID, json.optString("uuid"));
         intent.putExtra(App.KEY_EDIT_DESCRIPTION, json.optString("description"));
         intent.putExtra(App.KEY_EDIT_PROJECT, json.optString("project"));
@@ -466,12 +492,44 @@ public class AccountController {
         if (null != tags) {
             intent.putExtra(App.KEY_EDIT_TAGS, MainListAdapter.join(" ", MainListAdapter.array2List(tags)));
         }
-        intent.putExtra(App.KEY_EDIT_DUE, MainListAdapter.asDate(json.optString("due"), ""));
-        intent.putExtra(App.KEY_EDIT_WAIT, MainListAdapter.asDate(json.optString("wait"), ""));
-        intent.putExtra(App.KEY_EDIT_SCHEDULED, MainListAdapter.asDate(json.optString("scheduled"), ""));
-        intent.putExtra(App.KEY_EDIT_UNTIL, MainListAdapter.asDate(json.optString("until"), ""));
+        intent.putExtra(App.KEY_EDIT_DUE, MainListAdapter.asDate(json.optString("due"), "", MainListAdapter.formattedFormat));
+        intent.putExtra(App.KEY_EDIT_WAIT, MainListAdapter.asDate(json.optString("wait"), "", MainListAdapter.formattedFormat));
+        intent.putExtra(App.KEY_EDIT_SCHEDULED, MainListAdapter.asDate(json.optString("scheduled"), "", MainListAdapter.formattedFormat));
+        intent.putExtra(App.KEY_EDIT_UNTIL, MainListAdapter.asDate(json.optString("until"), "", MainListAdapter.formattedFormat));
         intent.putExtra(App.KEY_EDIT_RECUR, json.optString("recur"));
         return true;
+    }
+
+    public String taskDone(String uuid) {
+        StringAggregator err = new StringAggregator();
+        if (!callTask(outConsumer, err, uuid, "done")) { // Failure
+            return err.text();
+        }
+        return null; // Success
+    }
+
+    public String taskDelete(String uuid) {
+        StringAggregator err = new StringAggregator();
+        if (!callTask(outConsumer, err, uuid, "delete")) { // Failure
+            return err.text();
+        }
+        return null; // Success
+    }
+
+    public String taskStart(String uuid) {
+        StringAggregator err = new StringAggregator();
+        if (!callTask(outConsumer, err, uuid, "start")) { // Failure
+            return err.text();
+        }
+        return null; // Success
+    }
+
+    public String taskStop(String uuid) {
+        StringAggregator err = new StringAggregator();
+        if (!callTask(outConsumer, err, uuid, "stop")) { // Failure
+            return err.text();
+        }
+        return null; // Success
     }
 
     public String taskAdd(List<String> changes) {
@@ -483,7 +541,7 @@ public class AccountController {
             }
         }
         StringAggregator err = new StringAggregator();
-        if (!callTask(outConsumer, err, params.toArray(new String[0]))) { // Failure
+        if (!callTask(outConsumer, err, params.toArray(new String[params.size()]))) { // Failure
             return err.text();
         }
         return null; // Success

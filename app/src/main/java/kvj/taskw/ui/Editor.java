@@ -7,15 +7,19 @@ import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.DatePicker;
 import android.widget.EditText;
+import android.widget.Spinner;
 
 import org.kvj.bravo7.form.FormController;
+import org.kvj.bravo7.form.impl.widget.SpinnerIntegerAdapter;
 import org.kvj.bravo7.form.impl.widget.TextViewCharSequenceAdapter;
 import org.kvj.bravo7.log.Logger;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 
 import kvj.taskw.App;
 import kvj.taskw.R;
@@ -26,6 +30,8 @@ import kvj.taskw.R;
 public class Editor extends Fragment {
 
     Logger logger = Logger.forInstance(this);
+    private Spinner prioritiesSpinner = null;
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_editor, container, false);
@@ -33,6 +39,7 @@ public class Editor extends Fragment {
         setupDatePicker(view, R.id.editor_wait, R.id.editor_wait_btn);
         setupDatePicker(view, R.id.editor_scheduled, R.id.editor_scheduled_btn);
         setupDatePicker(view, R.id.editor_until, R.id.editor_until_btn);
+        prioritiesSpinner = (Spinner) view.findViewById(R.id.editor_priority);
         return view;
     }
 
@@ -45,6 +52,7 @@ public class Editor extends Fragment {
         form.add(new TextViewCharSequenceAdapter(R.id.editor_scheduled, ""), App.KEY_EDIT_SCHEDULED);
         form.add(new TextViewCharSequenceAdapter(R.id.editor_until, ""), App.KEY_EDIT_UNTIL);
         form.add(new TextViewCharSequenceAdapter(R.id.editor_recur, ""), App.KEY_EDIT_RECUR);
+        form.add(new SpinnerIntegerAdapter(R.id.editor_priority, -1), App.KEY_EDIT_PRIORITY);
     }
 
 
@@ -86,5 +94,11 @@ public class Editor extends Fragment {
                 dialog.show();
             }
         });
+    }
+
+    public void setupPriorities(List<String> strings) {
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item, strings);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        prioritiesSpinner.setAdapter(adapter);
     }
 }

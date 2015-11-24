@@ -35,6 +35,10 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
 
     public interface ItemListener {
         public void onEdit(JSONObject json);
+        public void onStatus(JSONObject json);
+        public void onDelete(JSONObject json);
+        public void onAnnotate(JSONObject json);
+        public void onStartStop(JSONObject json);
     }
 
     List<JSONObject> data = new ArrayList<>();
@@ -59,20 +63,47 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
         RemoteViews card = fill(holder.itemView.getContext(), json, info, urgMin, urgMax);
         holder.card.addView(card.apply(holder.itemView.getContext(), holder.card));
         final View bottomBtns = holder.card.findViewById(R.id.task_bottom_btns);
+        final View annotations = holder.card.findViewById(R.id.task_annotations);
         bottomBtns.setVisibility(View.GONE);
         holder.card.findViewById(R.id.task_more_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 boolean visible = bottomBtns.getVisibility() == View.VISIBLE;
                 bottomBtns.setVisibility(visible ? View.GONE : View.VISIBLE);
+                annotations.setVisibility(visible ? View.GONE : View.VISIBLE);
             }
         });
         holder.card.findViewById(R.id.task_edit_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (null != listener) listener.onEdit(json);
+                if (null != listener)
+                    listener.onEdit(json);
             }
         });
+        holder.card.findViewById(R.id.task_status_btn).setOnClickListener(
+            new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (null != listener)
+                        listener.onStatus(json);
+                }
+            });
+        holder.card.findViewById(R.id.task_delete_btn).setOnClickListener(
+            new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (null != listener)
+                        listener.onDelete(json);
+                }
+            });
+        holder.card.findViewById(R.id.task_annotate_btn).setOnClickListener(
+            new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (null != listener)
+                        listener.onAnnotate(json);
+                }
+            });
     }
 
     public void update(List<JSONObject> list, ReportInfo info) {
@@ -114,43 +145,59 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
         views.setViewVisibility(R.id.task_urgency, info.fields.containsKey("urgency")? View.VISIBLE: View.GONE);
         views.setViewVisibility(R.id.task_priority, info.fields.containsKey("priority")? View.VISIBLE: View.GONE);
         views.setImageViewResource(R.id.task_status_btn, status2icon(json.optString("status")));
+        views.setViewVisibility(R.id.task_annotations, View.GONE);
+        views.setViewVisibility(R.id.task_annotations_flag, View.GONE);
         for (Map.Entry<String, String> field : info.fields.entrySet()) {
             if (field.getKey().equalsIgnoreCase("description")) {
                 // Show title
                 views.setTextViewText(R.id.task_description, json.optString("description"));
+                JSONArray annotations = json.optJSONArray("annotations");
+                if (null != annotations && annotations.length() > 0) {
+                    // Have annotations
+                    views.setViewVisibility(R.id.task_annotations_flag, View.VISIBLE);
+                    if ("".equals(field.getValue())) {
+                        for (int i = 0; i < annotations.length(); i++) {
+                            JSONObject ann = annotations.optJSONObject(i);
+                            RemoteViews annView = new RemoteViews(context.getPackageName(), R.layout.item_one_annotation);
+                            annView.setTextViewText(R.id.task_ann_text, ann.optString("description", "Untitled"));
+                            annView.setTextViewText(R.id.task_ann_date, asDate(ann.optString("entry"), "", formattedFormatDT));
+                            views.addView(R.id.task_annotations, annView);
+                        }
+                    }
+                }
             }
             if (field.getKey().equalsIgnoreCase("priority")) {
                 int index = info.priorities.indexOf(json.optString("priority", ""));
                 if(index == -1) {
-                    views.setProgressBar(R.id.task_priority, info.priorities.size(), 0, false);
+                    views.setProgressBar(R.id.task_priority, 0, 0, false);
                 } else {
-                    views.setProgressBar(R.id.task_priority, info.priorities.size()-1, index, false);
+                    views.setProgressBar(R.id.task_priority, info.priorities.size()-1, info.priorities.size()-index-1, false);
                 }
             }
             if (field.getKey().equalsIgnoreCase("urgency")) {
                 views.setProgressBar(R.id.task_urgency, urgMax-urgMin, (int)Math.round(json.optDouble("urgency"))-urgMin, false);
             }
             if (field.getKey().equalsIgnoreCase("due")) {
-                addLabel(context, views, true, R.drawable.ic_label_due, asDate(json.optString("due"), field.getValue()));
+                addLabel(context, views, true, R.drawable.ic_label_due, asDate(json.optString("due"), field.getValue(), formattedFormat));
             }
             if (field.getKey().equalsIgnoreCase("wait")) {
-                addLabel(context, views, true, R.drawable.ic_label_due, asDate(json.optString("wait"), field.getValue()));
+                addLabel(context, views, true, R.drawable.ic_label_wait, asDate(json.optString("wait"), field.getValue(), formattedFormat));
             }
             if (field.getKey().equalsIgnoreCase("scheduled")) {
-                addLabel(context, views, true, R.drawable.ic_label_due, asDate(json.optString("scheduled"), field.getValue()));
+                addLabel(context, views, true, R.drawable.ic_label_scheduled, asDate(json.optString("scheduled"), field.getValue(), formattedFormat));
             }
             if (field.getKey().equalsIgnoreCase("recur")) {
                 String recur = json.optString("recur");
                 if (!TextUtils.isEmpty(recur) && info.fields.containsKey("until")) {
-                    String until = asDate(json.optString("until"), info.fields.get("until"));
+                    String until = asDate(json.optString("until"), info.fields.get("until"), formattedFormat);
                     if (!TextUtils.isEmpty(until)) {
                         recur += String.format(" ~ %s", until);
                     }
                 }
-                addLabel(context, views, true, R.drawable.ic_label_due, recur);
+                addLabel(context, views, true, R.drawable.ic_label_recur, recur);
             }
             if (field.getKey().equalsIgnoreCase("project")) {
-                addLabel(context, views, false, R.drawable.ic_label_tags, json.optString("project"));
+                addLabel(context, views, false, R.drawable.ic_label_project, json.optString("project"));
             }
             if (field.getKey().equalsIgnoreCase("tags")) {
                 addLabel(context, views, false, R.drawable.ic_label_tags, join(", ", array2List(json.optJSONArray("tags"))));
@@ -188,8 +235,9 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
     }
 
     public static DateFormat formattedFormat = new SimpleDateFormat("yyyy-MM-dd");
+    public static DateFormat formattedFormatDT = new SimpleDateFormat("yyyy-MM-dd HH:mm");
 
-    public static String asDate(String due, String value) {
+    public static String asDate(String due, String value, DateFormat format) {
         DateFormat jsonFormat = new SimpleDateFormat("yyyyMMdd'T'HHmmss");
         jsonFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
         if (TextUtils.isEmpty(due)) { // No value
@@ -198,7 +246,7 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
         try {
             Date parsed = jsonFormat.parse(due);
             logger.d("Parsed", parsed, due);
-            return formattedFormat.format(parsed);
+            return format.format(parsed);
         } catch (Exception e) {
             logger.e(e, "Failed to parse Date:", due);
         }

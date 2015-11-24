@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="2dp">
+    <TextView
+            android:id="@+id/task_ann_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+            android:text="Some annotation"/>
+    <LinearLayout
+            android:layout_marginTop="2dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+        <TextView
+                android:textAppearance="@style/TextAppearance.AppCompat.Small"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_gravity="center_vertical"
+                android:layout_weight="1"
+                android:id="@+id/task_ann_date"
+                android:text="2015-11-24 13:00"/>
+        <android.widget.ImageButton
+                android:id="@+id/task_ann_delete_btn"
+                android:layout_weight="0"
+                style="@style/IconButton"
+                android:src="@drawable/ic_action_delete"/>
+    </LinearLayout>
+</LinearLayout>

@@ -36,54 +36,78 @@
                             android:layout_gravity="center_vertical"
                             android:layout_weight="1"/>
                 </LinearLayout>
-                <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:minHeight="30dp" android:baselineAligned="false">
-                    <LinearLayout android:layout_width="0dp"
-                                  android:layout_weight="0.5"
-                                  android:orientation="vertical"
-                                  android:id="@+id/task_labels_left"
-                                  android:layout_height="wrap_content">
-                        <!--<include layout="@layout/item_one_label_left"/>-->
-                    </LinearLayout>
-                    <LinearLayout android:layout_width="0dp"
-                                  android:layout_weight="0.5"
-                                  android:orientation="vertical"
-                                  android:id="@+id/task_labels_right"
-                                  android:layout_height="wrap_content">
-                        <!--<include layout="@layout/item_one_label_right"/>-->
-                    </LinearLayout>
-                </LinearLayout>
-                <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-                    <FrameLayout
-                            android:layout_weight="1"
-                            android:layout_width="0dp"
-                            android:layout_height="match_parent"/>
+                <LinearLayout android:layout_width="match_parent"
+                              android:layout_height="wrap_content"
+                              android:orientation="vertical"
+                        android:layout_marginLeft="8dp">
                     <LinearLayout
-                            android:id="@+id/task_bottom_btns"
-                            android:layout_width="wrap_content"
-                            android:layout_height="match_parent"
-                            android:visibility="gone"
-                            android:orientation="horizontal">
-                        <android.widget.ImageButton
-                            android:id="@+id/task_annotate_btn"
-                            style="@style/IconButton"
-                            android:src="@drawable/ic_action_search"/>
-                        <android.widget.ImageButton
-                            android:id="@+id/task_edit_btn"
-                            style="@style/IconButton"
-                            android:src="@drawable/ic_action_add"/>
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:baselineAligned="false">
+                        <LinearLayout android:layout_width="0dp"
+                                      android:layout_weight="0.5"
+                                      android:orientation="vertical"
+                                      android:id="@+id/task_labels_left"
+                                      android:layout_height="wrap_content">
+                            <!--<include layout="@layout/item_one_label_left"/>-->
+                        </LinearLayout>
+                        <LinearLayout android:layout_width="0dp"
+                                      android:layout_weight="0.5"
+                                      android:orientation="vertical"
+                                      android:id="@+id/task_labels_right"
+                                      android:layout_height="wrap_content">
+                            <!--<include layout="@layout/item_one_label_right"/>-->
+                        </LinearLayout>
                     </LinearLayout>
-                    <android.widget.ImageButton
-                            android:id="@+id/task_more_btn"
-                            style="@style/IconButton"
-                            android:layout_gravity="top"
-                            android:src="@drawable/ic_action_more"/>
+                    <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+                        <FrameLayout
+                                android:layout_weight="1"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent">
+                            <android.widget.ImageView
+                                    android:id="@+id/task_annotations_flag"
+                                    style="@style/IconButton"
+                                    android:layout_width="24dp"
+                                    android:layout_height="24dp"
+                                    android:layout_gravity="center_vertical"
+                                    android:src="@drawable/ic_status_annotations"/>
+                        </FrameLayout>
+                        <LinearLayout
+                                android:id="@+id/task_bottom_btns"
+                                android:layout_width="wrap_content"
+                                android:layout_height="match_parent"
+                                android:visibility="gone"
+                                android:orientation="horizontal">
+                            <android.widget.ImageButton
+                                    android:id="@+id/task_delete_btn"
+                                    style="@style/IconButton"
+                                    android:src="@drawable/ic_action_delete"/>
+                            <android.widget.ImageButton
+                                    android:id="@+id/task_annotate_btn"
+                                    style="@style/IconButton"
+                                    android:src="@drawable/ic_action_annotate"/>
+                            <android.widget.ImageButton
+                                    android:id="@+id/task_edit_btn"
+                                    style="@style/IconButton"
+                                    android:src="@drawable/ic_action_edit"/>
+                        </LinearLayout>
+                        <android.widget.ImageButton
+                                android:id="@+id/task_more_btn"
+                                style="@style/IconButton"
+                                android:layout_gravity="top"
+                                android:src="@drawable/ic_action_more"/>
+                    </LinearLayout>
+                    <LinearLayout
+                            android:id="@+id/task_annotations"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:layout_weight="0">
+                    </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
         </FrameLayout>

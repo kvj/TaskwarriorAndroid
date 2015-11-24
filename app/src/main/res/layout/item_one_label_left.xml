@@ -7,7 +7,7 @@
         android:id="@+id/label_icon"
             style="@style/LabelIcon"
             android:layout_weight="0"
-            android:src="@drawable/ic_label_due"/>
+            android:src="@drawable/ic_label_scheduled"/>
     <TextView
         android:id="@+id/label_text"
             android:layout_width="0dp"
@@ -15,5 +15,5 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
             android:textAppearance="@style/TextAppearance.AppCompat.Small"
-            android:text="Some label"/>
+            android:text=""/>
 </LinearLayout>

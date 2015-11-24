@@ -8,6 +8,7 @@ import android.support.design.widget.NavigationView;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.SubMenu;
@@ -67,6 +68,26 @@ public class MainActivity extends AppCompatActivity {
                 // Start editor
                 edit(json);
             }
+
+            @Override
+            public void onStatus(JSONObject json) {
+                changeStatus(json);
+            }
+
+            @Override
+            public void onDelete(JSONObject json) {
+                doOp(String.format("Delete task '%s'?", json.optString("description")), json.optString("uuid"), "delete");
+            }
+
+            @Override
+            public void onAnnotate(JSONObject json) {
+
+            }
+
+            @Override
+            public void onStartStop(JSONObject json) {
+
+            }
         });
         addButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -79,6 +100,54 @@ public class MainActivity extends AppCompatActivity {
         form.add(new TransientAdapter<>(new StringBundleAdapter(), null), App.KEY_REPORT);
         form.add(new TransientAdapter<>(new StringBundleAdapter(), null), App.KEY_QUERY);
         form.load(this, savedInstanceState);
+    }
+
+    private void changeStatus(JSONObject json) {
+        String status = json.optString("status");
+        String uuid = json.optString("uuid");
+        String description = json.optString("description");
+        if ("pending".equalsIgnoreCase(status)) {
+            // Mark as done
+            doOp(String.format("Complete task '%s'?", description), uuid, "done");
+        }
+    }
+
+    private void doOp(String message, final String uuid, final String op) {
+        final String account = form.getValue(App.KEY_ACCOUNT);
+        final Tasks.ActivitySimpleTask<String> task = new Tasks.ActivitySimpleTask<String>(this) {
+
+            @Override
+            protected String doInBackground() {
+                if ("done".equalsIgnoreCase(op))
+                    return controller.accountController(account).taskDone(uuid);
+                if ("delete".equalsIgnoreCase(op))
+                    return controller.accountController(account).taskDelete(uuid);
+                if ("start".equalsIgnoreCase(op))
+                    return controller.accountController(account).taskStart(uuid);
+                if ("stop".equalsIgnoreCase(op))
+                    return controller.accountController(account).taskStop(uuid);
+                return "Not supported operation";
+            }
+
+            @Override
+            public void finish(String result) {
+                if (null != result) {
+                    controller.messageLong(result);
+                } else {
+                    list.reload();
+                }
+            }
+        };
+        if (TextUtils.isEmpty(message)) {
+            task.exec();
+        } else {
+            controller.question(this, message, new Runnable() {
+                @Override
+                public void run() {
+                    task.exec();
+                }
+            }, null);
+        }
     }
 
     private static AccountController.TaskListener setupProgressListener(final Activity activity, final View bar) {
@@ -109,14 +178,14 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(this, EditorActivity.class);
         final String account = form.getValue(App.KEY_ACCOUNT);
         controller.accountController(account).intentForEditor(intent, null);
-        startActivityForResult(intent, RESULT_OK);
+        startActivityForResult(intent, App.EDIT_REQUEST);
     }
 
     private void edit(JSONObject json) {
         Intent intent = new Intent(this, EditorActivity.class);
         final String account = form.getValue(App.KEY_ACCOUNT);
         if (controller.accountController(account).intentForEditor(intent, json.optString("uuid"))) { //
-            startActivityForResult(intent, RESULT_OK);
+            startActivityForResult(intent, App.EDIT_REQUEST);
         } else {
             controller.messageShort("Invalid task");
         }

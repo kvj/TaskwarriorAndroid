@@ -1,5 +1,6 @@
 package kvj.taskw.ui;
 
+import android.app.Activity;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
@@ -35,9 +36,10 @@ public class EditorActivity extends AppCompatActivity {
     private FormController form = new FormController(new ViewFinder.ActivityViewFinder(this));
     Controller controller = App.controller();
     Logger logger = Logger.forInstance(this);
+    private List<String> priorities = null;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_editor);
         toolbar = (Toolbar) findViewById(R.id.editor_toolbar);
@@ -47,6 +49,20 @@ public class EditorActivity extends AppCompatActivity {
         form.add(new TransientAdapter<>(new StringBundleAdapter(), null), App.KEY_EDIT_UUID);
         editor.initForm(form);
         form.load(this, savedInstanceState);
+        new Tasks.ActivitySimpleTask<List<String>>(this){
+
+            @Override
+            protected List<String> doInBackground() {
+                return controller.accountController(form.getValue(App.KEY_ACCOUNT, String.class)).taskPriority();
+            }
+
+            @Override
+            public void finish(List<String> result) {
+                editor.setupPriorities(result);
+                priorities = result;
+                form.load(EditorActivity.this, savedInstanceState, App.KEY_EDIT_PRIORITY);
+            }
+        }.exec();
     }
 
     @Override
@@ -77,15 +93,14 @@ public class EditorActivity extends AppCompatActivity {
             super.onBackPressed();
             return;
         }
-        new AlertDialog.Builder(this)
-                .setMessage("There are some changes, discard?")
-                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        EditorActivity.super.onBackPressed();
-                    }
-                }).setNegativeButton("No", null)
-                .show();
+        logger.d("Changed:", form.changes());
+        controller.question(this, "There are some changes, discard?", new Runnable() {
+
+            @Override
+            public void run() {
+                EditorActivity.super.onBackPressed();
+            }
+        }, null);
     }
     
     private String propertyChange(String key, String modifier) {
@@ -100,13 +115,14 @@ public class EditorActivity extends AppCompatActivity {
         if (!form.changed()) { // No change - no save
             return null;
         }
-        if (TextUtils.isEmpty((String)form.getValue(App.KEY_EDIT_DESCRIPTION))) { // Empty desc
+        String description = form.getValue(App.KEY_EDIT_DESCRIPTION);
+        if (TextUtils.isEmpty(description)) { // Empty desc
             return "Description is mandatory";
         }
         List<String> changes = new ArrayList<>();
         for (String key : form.changes()) { // Make changes
             if (App.KEY_EDIT_DESCRIPTION.equals(key)) { // Direct
-                changes.add((String)form.getValue(App.KEY_EDIT_DESCRIPTION));
+                changes.add(AccountController.escape(description));
             }
             if (App.KEY_EDIT_PROJECT.equals(key)) { // Direct
                 changes.add(propertyChange(key, "project"));
@@ -125,6 +141,10 @@ public class EditorActivity extends AppCompatActivity {
             }
             if (App.KEY_EDIT_RECUR.equals(key)) { // Direct
                 changes.add(propertyChange(key, "recur"));
+            }
+            if (App.KEY_EDIT_PRIORITY.equals(key)) { // Direct
+                changes.add(String.format("priority:%s", priorities
+                    .get(form.getValue(App.KEY_EDIT_PRIORITY, Integer.class))));
             }
             if (App.KEY_EDIT_TAGS.equals(key)) { // Direct
                 List<String> tags = new ArrayList<>();
@@ -156,6 +176,7 @@ public class EditorActivity extends AppCompatActivity {
                 if (!TextUtils.isEmpty(result)) { // Failed
                     controller.messageLong(result);
                 } else {
+                    EditorActivity.this.setResult(Activity.RESULT_OK);
                     EditorActivity.this.finish();
                 }
             }
