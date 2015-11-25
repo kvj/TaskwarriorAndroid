@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:orientation="vertical"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent">
+    <android.support.design.widget.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+        <EditText
+                android:hint="Annotation"
+                android:id="@+id/ann_text"
+                android:layout_width="match_parent"
+                android:singleLine="true"
+                android:layout_height="wrap_content"/>
+    </android.support.design.widget.TextInputLayout>
+    <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+        <Button
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_weight="0.5"
+                android:id="@+id/ann_ok_btn"
+                android:text="OK"/>
+        <Button
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_weight="0.5"
+                android:id="@+id/ann_cancel_btn"
+                android:text="Cancel"/>
+    </LinearLayout>
+</LinearLayout>

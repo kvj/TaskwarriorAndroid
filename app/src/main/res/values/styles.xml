@@ -8,6 +8,8 @@
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
     </style>
+    <style name="AppThemeDialog" parent="@style/Theme.AppCompat.Light.Dialog.Alert">
+    </style>
     <style name="AppThemeD" parent="Theme.AppCompat.Light.DialogWhenLarge">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>

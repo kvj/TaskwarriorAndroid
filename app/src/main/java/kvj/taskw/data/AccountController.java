@@ -52,6 +52,24 @@ public class AccountController {
         return new File(tasksFolder, TASKRC);
     }
 
+    public String taskAnnotate(String uuid, String text) {
+        StringAggregator err = new StringAggregator();
+        if (!callTask(outConsumer, err, uuid, "annotate", escape(text))) { // Failure
+            return err.text();
+        }
+        scheduleSync(TimerType.AfterChange);
+        return null; // Success
+    }
+
+    public String taskDenotate(String uuid, String text) {
+        StringAggregator err = new StringAggregator();
+        if (!callTask(outConsumer, err, uuid, "denotate", escape(text))) { // Failure
+            return err.text();
+        }
+        scheduleSync(TimerType.AfterChange);
+        return null; // Success
+    }
+
     public interface TaskListener {
         public void onStart();
         public void onFinish();
@@ -254,7 +272,7 @@ public class AccountController {
         String list = settings.get(androidConf("reports"));
         String defaultReport = settings.get(androidConf("report.default"));
         if (TextUtils.isEmpty(defaultReport)) {
-            defaultReport = "list";
+            defaultReport = "next";
         }
         if (!TextUtils.isEmpty(list)) {
             onlyThose.addAll(split2(list, ","));

@@ -24,6 +24,8 @@ public class App extends org.kvj.bravo7.ng.App<Controller> {
     public static final String KEY_EDIT_PRIORITY = "editor_priority";
     public static final int EDIT_REQUEST = 1;
     public static final int SYNC_REQUEST = 2;
+    public static final String KEY_EDIT_TEXT = "editor_text";
+    public static final int ANNOTATE_REQUEST = 3;
 
     @Override
     protected Controller create() {

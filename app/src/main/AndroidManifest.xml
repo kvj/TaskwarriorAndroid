@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
     <application
             android:name=".App"
@@ -19,14 +20,18 @@
         <activity android:name=".ui.MainActivity" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
         <activity
-                android:name=".account.AccountAuthenticator$AccountAddDialog"
-                android:theme="@style/Theme.AppCompat.Dialog.Alert" android:excludeFromRecents="true">
+            android:name=".account.AccountAuthenticator$AccountAddDialog"
+            android:theme="@style/AppThemeDialog"
+            android:excludeFromRecents="true">
 
+        </activity>
+        <activity
+            android:name=".ui.AnnotationDialog"
+            android:theme="@style/AppThemeDialog">
         </activity>
         <activity android:name=".ui.EditorActivity"
             android:theme="@style/AppThemeD">
@@ -44,7 +49,11 @@
                 android:name=".data.SyncIntentReceiver"
                 android:enabled="true"
                 android:exported="true">
-
+        </receiver>
+        <receiver android:name=".data.BootReceiver" >
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
         </receiver>
     </application>
 

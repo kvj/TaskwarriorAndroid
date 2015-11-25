@@ -24,9 +24,10 @@
                 android:id="@+id/task_ann_date"
                 android:text="2015-11-24 13:00"/>
         <android.widget.ImageButton
-                android:id="@+id/task_ann_delete_btn"
-                android:layout_weight="0"
-                style="@style/IconButton"
-                android:src="@drawable/ic_action_delete"/>
+            android:id="@+id/task_ann_delete_btn"
+            android:visibility="invisible"
+            android:layout_weight="0"
+            style="@style/IconButton"
+            android:src="@drawable/ic_action_delete"/>
     </LinearLayout>
 </LinearLayout>

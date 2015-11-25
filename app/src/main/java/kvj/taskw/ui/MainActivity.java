@@ -7,7 +7,6 @@ import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.v4.widget.DrawerLayout;
-import android.support.v4.widget.PopupMenuCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
@@ -127,7 +126,13 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onAnnotate(JSONObject json) {
+                annotate(json);
+            }
 
+            @Override
+            public void onDenotate(JSONObject json, JSONObject annJson) {
+                String text = annJson.optString("description");
+                doOp(String.format("Delete annotation '%s'?", text), json.optString("uuid"), "denotate", text);
             }
 
             @Override
@@ -146,6 +151,13 @@ public class MainActivity extends AppCompatActivity {
         form.add(new TransientAdapter<>(new StringBundleAdapter(), null), App.KEY_REPORT);
         form.add(new TransientAdapter<>(new StringBundleAdapter(), null), App.KEY_QUERY);
         form.load(this, savedInstanceState);
+    }
+
+    private void annotate(JSONObject json) {
+        Intent dialog = new Intent(this, AnnotationDialog.class);
+        dialog.putExtra(App.KEY_ACCOUNT, form.getValue(App.KEY_ACCOUNT, String.class));
+        dialog.putExtra(App.KEY_EDIT_UUID, json.optString("uuid"));
+        startActivityForResult(dialog, App.ANNOTATE_REQUEST);
     }
 
     private void showAccountMenu(View btn) {
@@ -211,7 +223,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void doOp(String message, final String uuid, final String op) {
+    private void doOp(String message, final String uuid, final String op, final String... ops) {
         final String account = form.getValue(App.KEY_ACCOUNT);
         final Tasks.ActivitySimpleTask<String> task = new Tasks.ActivitySimpleTask<String>(this) {
 
@@ -225,6 +237,8 @@ public class MainActivity extends AppCompatActivity {
                     return controller.accountController(account).taskStart(uuid);
                 if ("stop".equalsIgnoreCase(op))
                     return controller.accountController(account).taskStop(uuid);
+                if ("denotate".equalsIgnoreCase(op))
+                    return controller.accountController(account).taskDenotate(uuid, ops[0]);
                 return "Not supported operation";
             }
 

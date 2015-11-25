@@ -39,6 +39,7 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
         public void onDelete(JSONObject json);
         public void onAnnotate(JSONObject json);
         public void onStartStop(JSONObject json);
+        public void onDenotate(JSONObject json, JSONObject annJson);
     }
 
     List<JSONObject> data = new ArrayList<>();
@@ -63,7 +64,7 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
         RemoteViews card = fill(holder.itemView.getContext(), json, info, urgMin, urgMax);
         holder.card.addView(card.apply(holder.itemView.getContext(), holder.card));
         final View bottomBtns = holder.card.findViewById(R.id.task_bottom_btns);
-        final View annotations = holder.card.findViewById(R.id.task_annotations);
+        final ViewGroup annotations = (ViewGroup) holder.card.findViewById(R.id.task_annotations);
         bottomBtns.setVisibility(View.GONE);
         holder.card.findViewById(R.id.task_more_btn).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -104,6 +105,28 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
                         listener.onAnnotate(json);
                 }
             });
+        JSONArray annotationsArr = json.optJSONArray("annotations");
+        if (null != annotationsArr && annotationsArr.length() == annotations.getChildCount()) {
+            // Bind delete button
+            for (int i = 0; i < annotationsArr.length(); i++) { // Show and bind delete button
+                View deleteBtn = annotations.getChildAt(i).findViewById(R.id.task_ann_delete_btn);
+                if (null != deleteBtn) {
+                    deleteBtn.setVisibility(View.VISIBLE);
+                    deleteBtn.setOnClickListener(denotate(json, annotationsArr.optJSONObject(i)));
+                }
+            }
+        }
+    }
+
+    private View.OnClickListener denotate(final JSONObject json, final JSONObject annJson) {
+        return new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (null != listener) {
+                    listener.onDenotate(json, annJson);
+                }
+            }
+        };
     }
 
     public void update(List<JSONObject> list, ReportInfo info) {
