@@ -171,14 +171,16 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
                 if(index == -1) {
                     views.setProgressBar(R.id.task_priority, 0, 0, false);
                 } else {
-                    views.setProgressBar(R.id.task_priority, info.priorities.size()-1, info.priorities.size()-index-1, false);
+                    views.setProgressBar(R.id.task_priority, info.priorities.size() - 1,
+                                         info.priorities.size() - index - 1, false);
                 }
             }
             if (field.getKey().equalsIgnoreCase("urgency")) {
                 views.setProgressBar(R.id.task_urgency, urgMax-urgMin, (int)Math.round(json.optDouble("urgency"))-urgMin, false);
             }
             if (field.getKey().equalsIgnoreCase("due")) {
-                addLabel(context, views, true, R.drawable.ic_label_due, asDate(json.optString("due"), field.getValue(), formattedFormat));
+                addLabel(context, views, true, R.drawable.ic_label_due,
+                         asDate(json.optString("due"), field.getValue(), formattedFormat));
             }
             if (field.getKey().equalsIgnoreCase("wait")) {
                 addLabel(context, views, true, R.drawable.ic_label_wait, asDate(json.optString("wait"), field.getValue(), formattedFormat));
@@ -200,7 +202,14 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
                 addLabel(context, views, false, R.drawable.ic_label_project, json.optString("project"));
             }
             if (field.getKey().equalsIgnoreCase("tags")) {
-                addLabel(context, views, false, R.drawable.ic_label_tags, join(", ", array2List(json.optJSONArray("tags"))));
+                addLabel(context, views, false, R.drawable.ic_label_tags, join(", ", array2List(
+                    json.optJSONArray("tags"))));
+            }
+            if (field.getKey().equalsIgnoreCase("start")) {
+                String started = asDate(json.optString("start"), field.getValue(), formattedFormatDT);
+                if (!TextUtils.isEmpty(started)) {
+                    views.setViewVisibility(R.id.task_start_flag, View.VISIBLE);
+                }
             }
         }
         return views;

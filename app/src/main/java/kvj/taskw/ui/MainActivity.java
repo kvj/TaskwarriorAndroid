@@ -2,18 +2,24 @@ package kvj.taskw.ui;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.v4.widget.DrawerLayout;
+import android.support.v4.widget.PopupMenuCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.SubMenu;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.PopupMenu;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import org.json.JSONObject;
 import org.kvj.bravo7.form.FormController;
@@ -49,6 +55,20 @@ public class MainActivity extends AppCompatActivity {
     private FloatingActionButton addButton = null;
     private ProgressBar progressBar = null;
     private AccountController.TaskListener progressListener = null;
+    private TextView accountNameDisplay = null;
+    private ViewGroup header = null;
+    private PopupMenu.OnMenuItemClickListener accountMenuListener = new PopupMenu.OnMenuItemClickListener() {
+        @Override
+        public boolean onMenuItemClick(MenuItem item) {
+            switch (item.getItemId()) {
+                case R.id.menu_account_add:
+                    controller.addAccount(MainActivity.this);
+                    break;
+            }
+            navigationDrawer.closeDrawers();
+            return true;
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,11 +77,37 @@ public class MainActivity extends AppCompatActivity {
         toolbar = (Toolbar) findViewById(R.id.list_toolbar);
         navigationDrawer = (DrawerLayout) findViewById(R.id.list_navigation_drawer);
         navigation = (NavigationView) findViewById(R.id.list_navigation);
+        header = (ViewGroup) navigation.inflateHeaderView(R.layout.item_nav_header);
+        navigation.setNavigationItemSelectedListener(
+            new NavigationView.OnNavigationItemSelectedListener() {
+                @Override
+                public boolean onNavigationItemSelected(MenuItem item) {
+                    onNavigationMenu(item);
+                    return true;
+                }
+            });
         list = (MainList) getSupportFragmentManager().findFragmentById(R.id.list_list_fragment);
         addButton = (FloatingActionButton) findViewById(R.id.list_add_btn);
         progressBar = (ProgressBar) findViewById(R.id.list_progress);
+        accountNameDisplay = (TextView) header.findViewById(R.id.list_nav_account_name);
         setSupportActionBar(toolbar);
         toolbar.setNavigationIcon(getDrawerToggleDelegate().getThemeUpIndicator());
+        toolbar.setNavigationOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (navigationDrawer.isDrawerOpen(Gravity.LEFT)) {
+                    navigationDrawer.closeDrawers();
+                } else {
+                    navigationDrawer.openDrawer(Gravity.LEFT);
+                }
+            }
+        });
+        header.findViewById(R.id.list_nav_menu_btn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showAccountMenu(v);
+            }
+        });
         list.listener(new MainListAdapter.ItemListener() {
             @Override
             public void onEdit(JSONObject json) {
@@ -100,6 +146,59 @@ public class MainActivity extends AppCompatActivity {
         form.add(new TransientAdapter<>(new StringBundleAdapter(), null), App.KEY_REPORT);
         form.add(new TransientAdapter<>(new StringBundleAdapter(), null), App.KEY_QUERY);
         form.load(this, savedInstanceState);
+    }
+
+    private void showAccountMenu(View btn) {
+        PopupMenu menu = new PopupMenu(this, btn);
+        menu.inflate(R.menu.menu_account);
+        int index = 0;
+        for (String accountName : controller.accounts()) {
+            menu.getMenu().add(R.id.menu_account_list, index++, 0, accountName)
+                .setOnMenuItemClickListener(newAccountMenu(accountName));
+        }
+        menu.setOnMenuItemClickListener(accountMenuListener);
+        menu.show();
+    }
+
+    private MenuItem.OnMenuItemClickListener newAccountMenu(final String accountName) {
+        return new MenuItem.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                Intent listIntent = new Intent(MainActivity.this, MainActivity.class);
+                listIntent.putExtra(App.KEY_ACCOUNT, accountName);
+                startActivity(listIntent);
+                return true;
+            }
+        };
+    }
+
+    private void onNavigationMenu(MenuItem item) {
+        final String account = form.getValue(App.KEY_ACCOUNT);
+        AccountController accountController = controller.accountController(account);
+        navigationDrawer.closeDrawers();
+        switch (item.getItemId()) {
+            case R.id.menu_nav_reload:
+                if (null != accountController) {
+                    controller.accountController(account, true); //Re-init
+                    refreshReports();
+                    controller.messageShort("Refreshed");
+                }
+                break;
+            case R.id.menu_nav_settings:
+                // Open taskrc for editing
+                if (null != accountController) {
+                    Intent intent = new Intent(Intent.ACTION_EDIT);
+                    Uri uri = Uri.parse(String.format("file://%s", accountController.taskrc().getAbsolutePath()));
+                    intent.setDataAndType(uri, "text/plain");
+                    try {
+                        startActivity(intent);
+                    } catch (Exception e) {
+                        logger.e(e, "Failed to edit file");
+                        controller.messageLong("No suitable plain text editors found");
+                    }
+                }
+                break;
+        }
     }
 
     private void changeStatus(JSONObject json) {
@@ -210,6 +309,7 @@ public class MainActivity extends AppCompatActivity {
         if (checkAccount()) {
             addButton.setEnabled(true);
             accountController().listeners().add(progressListener);
+            accountNameDisplay.setText(form.getValue(App.KEY_ACCOUNT, String.class));
         }
     }
 
@@ -227,6 +327,7 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean checkAccount() {
         if (null != form.getValue(App.KEY_ACCOUNT)) { // Have account
+            refreshReports();
             return true;
         }
         String account = controller.currentAccount();
@@ -263,8 +364,7 @@ public class MainActivity extends AppCompatActivity {
                     // Report mode
                     String report = form.getValue(App.KEY_REPORT);
                     if (null == report || !result.containsKey(report)) {
-//                        report = result.keySet().iterator().next(); // First item
-                        report = "next";
+                        report = result.keySet().iterator().next(); // First item
                     }
                     form.setValue(App.KEY_REPORT, report);
                 }
@@ -272,16 +372,17 @@ public class MainActivity extends AppCompatActivity {
             }
 
             private void addReportMenuItem(final String key, String title, SubMenu menu) {
-                menu.add(title).setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
-                    @Override
-                    public boolean onMenuItemClick(MenuItem item) {
-                        // Show report
-                        form.setValue(App.KEY_REPORT, key);
-                        form.setValue(App.KEY_QUERY, null);
-                        list.load(form, updateTitleAction);
-                        return false;
-                    }
-                });
+                menu.add(title).setIcon(R.drawable.ic_action_report).setOnMenuItemClickListener(
+                    new MenuItem.OnMenuItemClickListener() {
+                        @Override
+                        public boolean onMenuItemClick(MenuItem item) {
+                            // Show report
+                            form.setValue(App.KEY_REPORT, key);
+                            form.setValue(App.KEY_QUERY, null);
+                            list.load(form, updateTitleAction);
+                            return false;
+                        }
+                    });
             }
         }.exec();
     }

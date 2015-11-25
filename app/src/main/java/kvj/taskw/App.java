@@ -21,11 +21,20 @@ public class App extends org.kvj.bravo7.ng.App<Controller> {
     public static final String KEY_EDIT_SCHEDULED = "editor_scheduled";
     public static final String KEY_EDIT_RECUR = "editor_recur";
     public static final String KEY_EDIT_UNTIL = "editor_until";
-    public static final int EDIT_REQUEST = 1;
     public static final String KEY_EDIT_PRIORITY = "editor_priority";
+    public static final int EDIT_REQUEST = 1;
+    public static final int SYNC_REQUEST = 2;
 
     @Override
     protected Controller create() {
         return new Controller(this, "Taskwarrior");
+    }
+
+    @Override
+    protected void init() {
+        Controller controller = App.controller();
+        for (String name : controller.accounts()) {
+            controller.accountController(name); // This will schedule sync
+        }
     }
 }

@@ -1,8 +1,10 @@
 package kvj.taskw.data;
 
+import android.app.PendingIntent;
 import android.content.Intent;
 import android.net.LocalServerSocket;
 import android.net.LocalSocket;
+import android.net.Uri;
 import android.support.v4.app.NotificationCompat;
 import android.text.TextUtils;
 
@@ -10,6 +12,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.kvj.bravo7.log.Logger;
 import org.kvj.bravo7.util.Listeners;
+import org.kvj.bravo7.util.Tasks;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -23,6 +26,7 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -33,6 +37,7 @@ import java.util.regex.Pattern;
 import javax.net.ssl.SSLSocketFactory;
 
 import kvj.taskw.App;
+import kvj.taskw.R;
 import kvj.taskw.sync.SSLHelper;
 import kvj.taskw.ui.MainListAdapter;
 
@@ -42,6 +47,10 @@ import kvj.taskw.ui.MainListAdapter;
 public class AccountController {
 
     private final String accountName;
+
+    public File taskrc() {
+        return new File(tasksFolder, TASKRC);
+    }
 
     public interface TaskListener {
         public void onStart();
@@ -98,7 +107,8 @@ public class AccountController {
         this.accountName = name;
         this.name = name.toLowerCase();
         tasksFolder = initTasksFolder();
-        syncSocket = openLocalSocket(SYNC_SOCKET+this.name);
+        syncSocket = openLocalSocket(SYNC_SOCKET + this.name);
+        scheduleSync(TimerType.Periodical); // Schedule on start
     }
 
     private class StringAggregator implements StreamConsumer {
@@ -118,11 +128,58 @@ public class AccountController {
         }
     }
 
+    public enum TimerType {Periodical("periodical"), AfterError("onerror"), AfterChange("onchange");
+
+        private final String type;
+
+        TimerType(String type) {
+            this.type = type;
+        }
+    }
+
+    public void stop() {
+        controller.cancelAlarm(syncIntent("alarm"));
+    }
+
+    public void scheduleSync(final TimerType type) {
+        new Tasks.SimpleTask<Double>() {
+            @Override
+            protected Double doInBackground() {
+                Map<String, String> config = taskSettings(androidConf(String.format("sync.%s", type.type)));
+                if (config.isEmpty()) {
+                    return 0.0;
+                }
+                try {
+                    return Double.parseDouble(config.values().iterator().next());
+                } catch (Exception e) {
+                    logger.w("Failed to parse:", e.getMessage(), config);
+                }
+                return 0.0;
+            }
+
+            @Override
+            protected void onPostExecute(Double minutes) {
+                if (minutes <= 0) {
+                    logger.d("Ignore schedule - not configured", type);
+                    return;
+                }
+                Calendar c = Calendar.getInstance();
+                c.add(Calendar.SECOND, (int) (minutes * 60.0));
+                controller.scheduleAlarm(c.getTime(), syncIntent("alarm"));
+                logger.d("Scheduled:", c.getTime(), type);
+            }
+        }.exec();
+    }
+
+    private String androidConf(String format) {
+        return String.format("android.%s", format);
+    }
+
     public String taskSync() {
         NotificationCompat.Builder n = controller.newNotification(accountName);
-        n.setOnlyAlertOnce(true);
         n.setOngoing(true);
         n.setContentText("Sync is in progress");
+        n.setTicker("Sync is in progress");
         n.setPriority(NotificationCompat.PRIORITY_DEFAULT);
         controller.notify(Controller.NotificationType.Sync, accountName, n);
         StringAggregator err = new StringAggregator();
@@ -134,15 +191,20 @@ public class AccountController {
         if (result) { // Success
             n.setContentText("Sync complete");
             n.setPriority(NotificationCompat.PRIORITY_MIN);
+            n.addAction(R.drawable.ic_action_sync, "Sync again", syncIntent("notification"));
             controller.notify(Controller.NotificationType.Sync, accountName, n);
+            scheduleSync(TimerType.Periodical);
             return null;
         } else {
             String error = err.text();
-            n.setOnlyAlertOnce(true);
             n.setContentText("Sync failed");
+            n.setTicker("Sync failed");
             n.setSubText(error);
+            n.setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
             n.setPriority(NotificationCompat.PRIORITY_DEFAULT);
+            n.addAction(R.drawable.ic_action_sync, "Retry now", syncIntent("notification"));
             controller.notify(Controller.NotificationType.Sync, accountName, n);
+            scheduleSync(TimerType.AfterError);
             return error;
         }
     }
@@ -186,14 +248,44 @@ public class AccountController {
     }
 
     public Map<String, String> taskReports() {
-        final Map<String, String> result = new LinkedHashMap<>();
+        final List<String> onlyThose = new ArrayList<>(); // Save names of pre-configured reports here
+        Map<String, String> settings = taskSettings(androidConf("reports"),
+                                                    androidConf("report.default"));
+        String list = settings.get(androidConf("reports"));
+        String defaultReport = settings.get(androidConf("report.default"));
+        if (TextUtils.isEmpty(defaultReport)) {
+            defaultReport = "list";
+        }
+        if (!TextUtils.isEmpty(list)) {
+            onlyThose.addAll(split2(list, ","));
+        }
+        final List<String> keys = new ArrayList<>();
+        final List<String> values = new ArrayList<>();
         callTask(new PatternLineConsumer() {
 
             @Override
             void eat(String key, String value) {
-                result.put(key, value);
+                if (!onlyThose.isEmpty() && !onlyThose.contains(key)) {
+                    return; // Skip
+                }
+                keys.add(key);
+                values.add(value);
             }
         }, errConsumer, "reports");
+        LinkedHashMap<String, String> result = new LinkedHashMap<>();
+//        logger.d("Reports:", keys, values, defaultReport, list, onlyThose, settings);
+        if (keys.contains(defaultReport)) {
+            // Move default to the top
+            int index = keys.indexOf(defaultReport);
+            keys.add(0, keys.get(index));
+            keys.remove(index+1);
+            values.add(0, values.get(index));
+            values.remove(index + 1);
+        }
+        for (int i = 0; i < keys.size(); i++) {
+            result.put(keys.get(i), values.get(i));
+        }
+//        logger.d("Reports after sort:", keys, values, defaultReport, result);
         return result;
     }
 
@@ -203,10 +295,10 @@ public class AccountController {
         while (true) {
             int index = src.indexOf(sep, start);
             if (index == -1) {
-                result.add(src.substring(start));
+                result.add(src.substring(start).trim());
                 return result;
             }
-            result.add(src.substring(start, index));
+            result.add(src.substring(start, index).trim());
             start = index+sep.length();
         }
     }
@@ -339,6 +431,7 @@ public class AccountController {
             return 0 == exitCode;
         } catch (Exception e) {
             logger.e(e, "Failed to execute task");
+            err.eat(e.getMessage());
             return false;
         } finally {
             taskListeners.emit(new Listeners.ListenerEmitter<TaskListener>() {
@@ -523,6 +616,7 @@ public class AccountController {
         if (!callTask(outConsumer, err, uuid, "done")) { // Failure
             return err.text();
         }
+        scheduleSync(TimerType.AfterChange);
         return null; // Success
     }
 
@@ -531,6 +625,7 @@ public class AccountController {
         if (!callTask(outConsumer, err, uuid, "delete")) { // Failure
             return err.text();
         }
+        scheduleSync(TimerType.AfterChange);
         return null; // Success
     }
 
@@ -539,6 +634,7 @@ public class AccountController {
         if (!callTask(outConsumer, err, uuid, "start")) { // Failure
             return err.text();
         }
+        scheduleSync(TimerType.AfterChange);
         return null; // Success
     }
 
@@ -547,6 +643,7 @@ public class AccountController {
         if (!callTask(outConsumer, err, uuid, "stop")) { // Failure
             return err.text();
         }
+        scheduleSync(TimerType.AfterChange);
         return null; // Success
     }
 
@@ -562,6 +659,7 @@ public class AccountController {
         if (!callTask(outConsumer, err, params.toArray(new String[params.size()]))) { // Failure
             return err.text();
         }
+        scheduleSync(TimerType.AfterChange);
         return null; // Success
     }
 
@@ -578,10 +676,18 @@ public class AccountController {
         if (!callTask(outConsumer, err, params.toArray(new String[0]))) { // Failure
             return err.text();
         }
+        scheduleSync(TimerType.AfterChange);
         return null; // Success
     }
 
     public Listeners<TaskListener> listeners() {
         return taskListeners;
+    }
+
+    public PendingIntent syncIntent(String type) {
+        Intent intent = new Intent(controller.context(), SyncIntentReceiver.class);
+        intent.putExtra(App.KEY_ACCOUNT, accountName);
+        intent.setData(Uri.fromParts("tw", type, accountName));
+        return PendingIntent.getBroadcast(controller.context(), App.SYNC_REQUEST, intent, PendingIntent.FLAG_CANCEL_CURRENT);
     }
 }

@@ -6,17 +6,22 @@ import android.accounts.AccountManagerCallback;
 import android.accounts.AccountManagerFuture;
 import android.app.Activity;
 import android.app.Notification;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
+import android.text.TextUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import kvj.taskw.App;
@@ -84,6 +89,15 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
         return accounts[0].name;
     }
 
+    public Collection<String> accounts() {
+        Account[] accounts = accountManager.getAccountsByType(App.ACCOUNT_TYPE);
+        List<String> result = new ArrayList<>();
+        for (Account acc : accounts) {
+            result.add(acc.name);
+        }
+        return result;
+    }
+
     public void addAccount(Activity activity) {
         logger.d("Will add new account");
         accountManager.addAccount(App.ACCOUNT_TYPE, null, null, null, activity,
@@ -142,14 +156,21 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
     }
 
     public synchronized AccountController accountController(String name, boolean reinit) {
-        if (!controllerMap.containsKey(name) || reinit) {
+        if (TextUtils.isEmpty(name)) {
+            return null;
+        }
+        AccountController current = controllerMap.get(name);
+        if (null == current || reinit) {
+            if (null != current) {
+                current.stop(); // Cancel all schedules
+            }
             controllerMap.put(name, new AccountController(this, name));
         }
         return controllerMap.get(name);
     }
 
     public enum NotificationType {
-        Sync(1),;
+        Sync(1);
 
         private final int id;
 
