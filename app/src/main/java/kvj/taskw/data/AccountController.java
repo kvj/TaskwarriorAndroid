@@ -31,6 +31,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -47,6 +48,7 @@ import kvj.taskw.ui.MainListAdapter;
 public class AccountController {
 
     private final String accountName;
+    private Thread acceptThread = null;
 
     public File taskrc() {
         return new File(tasksFolder, TASKRC);
@@ -70,6 +72,15 @@ public class AccountController {
         return null; // Success
     }
 
+    public String taskUndo() {
+        StringAggregator err = new StringAggregator();
+        if (!callTask(outConsumer, err, "undo")) { // Failure
+            return err.text();
+        }
+        scheduleSync(TimerType.AfterChange);
+        return null; // Success
+    }
+
     public interface TaskListener {
         public void onStart();
         public void onFinish();
@@ -85,12 +96,12 @@ public class AccountController {
         }
     };
 
-    private static final String SYNC_SOCKET = "taskwarrior.sync.";
     public static final String TASKRC = ".taskrc.android";
     public static final String DATA_FOLDER = "data";
     private final Controller controller;
     private final String name;
     private boolean active = false;
+    private final String socketName;
 
     Logger logger = Logger.forInstance(this);
 
@@ -125,7 +136,8 @@ public class AccountController {
         this.accountName = name;
         this.name = name.toLowerCase();
         tasksFolder = initTasksFolder();
-        syncSocket = openLocalSocket(SYNC_SOCKET + this.name);
+        socketName = UUID.randomUUID().toString().toLowerCase();
+        syncSocket = openLocalSocket(socketName);
         scheduleSync(TimerType.Periodical); // Schedule on start
     }
 
@@ -157,6 +169,13 @@ public class AccountController {
 
     public void stop() {
         controller.cancelAlarm(syncIntent("alarm"));
+        if (null != syncSocket) {
+            try {
+                syncSocket.close();
+            } catch (Exception e) {
+                logger.w(e, "Failed to close socket");
+            }
+        }
     }
 
     public void scheduleSync(final TimerType type) {
@@ -202,7 +221,7 @@ public class AccountController {
         controller.notify(Controller.NotificationType.Sync, accountName, n);
         StringAggregator err = new StringAggregator();
         StringAggregator out = new StringAggregator();
-        boolean result = callTask(out, err, "rc.taskd.socket=" + SYNC_SOCKET + name, "sync");
+        boolean result = callTask(out, err, "rc.taskd.socket=" + socketName, "sync");
         logger.d("Sync result:", result, "ERR:", err.text(), "OUT:", out.text());
         n = controller.newNotification(accountName);
         n.setOngoing(false);
@@ -544,7 +563,7 @@ public class AccountController {
                 return null;
             }
             final LocalServerSocket socket = new LocalServerSocket(name);
-            Thread acceptThread = new Thread() {
+            acceptThread = new Thread() {
                 @Override
                 public void run() {
                     while (true) {
@@ -554,6 +573,7 @@ public class AccountController {
                             new LocalSocketThread(config, conn).start();
                         } catch (IOException e) {
                             logger.w(e, "Accept failed");
+                            return;
                         }
                     }
                 }
@@ -664,6 +684,23 @@ public class AccountController {
         scheduleSync(TimerType.AfterChange);
         return null; // Success
     }
+
+    public String taskLog(List<String> changes) {
+        List<String> params = new ArrayList<>();
+        params.add("log");
+        for (String change : changes) { // Copy non-empty
+            if (!TextUtils.isEmpty(change)) {
+                params.add(change);
+            }
+        }
+        StringAggregator err = new StringAggregator();
+        if (!callTask(outConsumer, err, params.toArray(new String[params.size()]))) { // Failure
+            return err.text();
+        }
+        scheduleSync(TimerType.AfterChange);
+        return null; // Success
+    }
+
 
     public String taskAdd(List<String> changes) {
         List<String> params = new ArrayList<>();

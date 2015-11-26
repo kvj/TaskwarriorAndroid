@@ -191,9 +191,7 @@ public class MainActivity extends AppCompatActivity {
         switch (item.getItemId()) {
             case R.id.menu_nav_reload:
                 if (null != accountController) {
-                    controller.accountController(account, true); //Re-init
-                    refreshReports();
-                    controller.messageShort("Refreshed");
+                    refreshAccount(account);
                 }
                 break;
             case R.id.menu_nav_settings:
@@ -211,6 +209,22 @@ public class MainActivity extends AppCompatActivity {
                 }
                 break;
         }
+    }
+
+    private void refreshAccount(final String account) {
+        new Tasks.ActivitySimpleTask<AccountController>(this) {
+
+            @Override
+            protected AccountController doInBackground() {
+                return controller.accountController(account, true); //Re-init
+            }
+
+            @Override
+            public void finish(AccountController result) {
+                refreshReports();
+                controller.messageShort("Refreshed");
+            }
+        }.exec();
     }
 
     private void changeStatus(JSONObject json) {
@@ -410,8 +424,34 @@ public class MainActivity extends AppCompatActivity {
             case R.id.menu_tb_sync:
                 sync();
                 break;
+            case R.id.menu_tb_undo:
+                undo();
+                break;
         }
         return true;
+    }
+
+    private void undo() {
+        final AccountController ac = controller.accountController(form.getValue(App.KEY_ACCOUNT, String.class));
+        if (null == ac) {
+            return;
+        }
+        new Tasks.ActivitySimpleTask<String>(this){
+
+            @Override
+            protected String doInBackground() {
+                return ac.taskUndo();
+            }
+
+            @Override
+            public void finish(String result) {
+                if (null != result) {
+                    controller.messageShort(result);
+                } else {
+                    list.reload();
+                }
+            }
+        }.exec();
     }
 
     private void sync() {
@@ -427,7 +467,7 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void finish(String result) {
                     if (null != result) { // Error
-                        controller.messageLong(result);
+                        controller.messageShort(result);
                     } else {
                         controller.messageShort("Sync success");
                         list.reload();

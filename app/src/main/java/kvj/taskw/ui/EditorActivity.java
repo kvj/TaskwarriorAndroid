@@ -61,6 +61,7 @@ public class EditorActivity extends AppCompatActivity {
                 editor.setupPriorities(result);
                 priorities = result;
                 form.load(EditorActivity.this, savedInstanceState, App.KEY_EDIT_PRIORITY);
+                editor.show(form);
             }
         }.exec();
     }
@@ -154,10 +155,12 @@ public class EditorActivity extends AppCompatActivity {
             }
         }
         String uuid = form.getValue(App.KEY_EDIT_UUID);
-        AccountController ac = controller.accountController(form.getValue(App.KEY_ACCOUNT, String.class));
-        logger.d("Saving change:", uuid, changes);
+        AccountController ac = controller.accountController(
+            form.getValue(App.KEY_ACCOUNT, String.class));
+        boolean completed = form.getValue(App.KEY_EDIT_STATUS, Integer.class) > 0;
+        logger.d("Saving change:", uuid, changes, completed);
         if (TextUtils.isEmpty(uuid)) { // Add new
-            return ac.taskAdd(changes);
+            return completed? ac.taskLog(changes): ac.taskAdd(changes);
         } else {
             return ac.taskModify(uuid, changes);
         }

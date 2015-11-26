@@ -13,6 +13,7 @@ import android.widget.EditText;
 import android.widget.Spinner;
 
 import org.kvj.bravo7.form.FormController;
+import org.kvj.bravo7.form.impl.widget.ImageViewIntegerAdapter;
 import org.kvj.bravo7.form.impl.widget.SpinnerIntegerAdapter;
 import org.kvj.bravo7.form.impl.widget.TextViewCharSequenceAdapter;
 import org.kvj.bravo7.log.Logger;
@@ -53,6 +54,7 @@ public class Editor extends Fragment {
         form.add(new TextViewCharSequenceAdapter(R.id.editor_until, ""), App.KEY_EDIT_UNTIL);
         form.add(new TextViewCharSequenceAdapter(R.id.editor_recur, ""), App.KEY_EDIT_RECUR);
         form.add(new SpinnerIntegerAdapter(R.id.editor_priority, -1), App.KEY_EDIT_PRIORITY);
+        form.add(new ImageViewIntegerAdapter(R.id.editor_type_switch, R.drawable.ic_status_pending, R.drawable.ic_status_completed, 0), App.KEY_EDIT_STATUS);
     }
 
 
@@ -83,7 +85,7 @@ public class Editor extends Fragment {
                 DatePickerDialog dialog = new DatePickerDialog(getContext(), new DatePickerDialog.OnDateSetListener() {
                     @Override
                     public void onDateSet(DatePicker view, int year, int monthOfYear, int dayOfMonth) {
-                        logger.d("Date set:", year, monthOfYear, dayOfMonth);
+//                        logger.d("Date set:", year, monthOfYear, dayOfMonth);
                         c.set(Calendar.DAY_OF_MONTH, 1);
                         c.set(Calendar.YEAR, year);
                         c.set(Calendar.MONTH, monthOfYear);
@@ -100,5 +102,14 @@ public class Editor extends Fragment {
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_spinner_item, strings);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         prioritiesSpinner.setAdapter(adapter);
+    }
+
+    public void show(FormController form) {
+        String uuid = form.getValue(App.KEY_EDIT_UUID);
+        if (TextUtils.isEmpty(uuid)) { // Add new
+            form.getView(App.KEY_EDIT_STATUS).setVisibility(View.VISIBLE);
+        } else {
+            form.getView(App.KEY_EDIT_STATUS).setVisibility(View.GONE);
+        }
     }
 }

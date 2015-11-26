@@ -25,8 +25,8 @@
         <item name="android:layout_gravity">bottom</item>
     </style>
     <style name="LabelIcon">
-        <item name="android:layout_width">24dp</item>
-        <item name="android:layout_height">24dp</item>
+        <item name="android:layout_width">16dp</item>
+        <item name="android:layout_height">16dp</item>
         <item name="android:layout_gravity">top</item>
         <item name="android:layout_margin">2dp</item>
     </style>
