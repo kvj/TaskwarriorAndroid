@@ -32,6 +32,12 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
 
     private int urgMin;
     private int urgMax;
+    private Accessor<JSONObject, String> uuidAcc = new Accessor<JSONObject, String>() {
+        @Override
+        public String get(JSONObject object) {
+            return object.optString("uuid");
+        }
+    };
 
     public interface ItemListener {
         public void onEdit(JSONObject json);
@@ -105,6 +111,14 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
                         listener.onAnnotate(json);
                 }
             });
+        holder.card.findViewById(R.id.task_start_stop_btn).setOnClickListener(
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        if (null != listener)
+                            listener.onStartStop(json);
+                    }
+                });
         JSONArray annotationsArr = json.optJSONArray("annotations");
         if (null != annotationsArr && annotationsArr.length() == annotations.getChildCount()) {
             // Bind delete button
@@ -129,6 +143,49 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
         };
     }
 
+    interface Accessor<O, V> {
+        V get(O object);
+    }
+
+    private static <O, V> int indexOf(Collection<O> from, Accessor<O, V> acc, V value) {
+        int index = 0;
+        for (O item : from) { // $COMMENT
+            if (value.equals(acc.get(item))) { // Found
+                return index;
+            }
+            index++;
+        }
+        return -1;
+    }
+
+    public <O, V> void morph(List<O> from, List<O> to, Accessor<O, V> acc) {
+        for (int i = 0; i < to.size();) {
+            O item = to.get(i);
+            V id = acc.get(item);
+            boolean remove = indexOf(from, acc, id) == -1; // Item not found in new array
+            if (remove) { //
+                notifyItemRemoved(i);
+                to.remove(i);
+            } else {
+                i++;
+            }
+        }
+        for (int i = 0; i < from.size(); i++) {
+            O item = from.get(i);
+            V id = acc.get(item);
+            int idx =  indexOf(to, acc, id); // Location in old array
+            if (idx == -1) { // Add item
+                notifyItemInserted(i);
+                to.add(i, item);
+            } else {
+                notifyItemMoved(idx, i);
+                to.remove(idx);
+                to.add(i, item);
+                notifyItemChanged(i);
+            }
+        }
+    }
+
     public void update(List<JSONObject> list, ReportInfo info) {
         this.info = info;
         boolean hasUrgency = info.fields.containsKey("urgency");
@@ -147,9 +204,10 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
             urgMin = (int) Math.floor(min);
             urgMax = (int) Math.ceil(max);
         }
-        data.clear();
-        data.addAll(list);
-        notifyDataSetChanged();
+        morph(list, data, uuidAcc);
+//        data.clear();
+//        data.addAll(list);
+//        notifyDataSetChanged();
     }
 
     public static class ListViewHolder extends RecyclerView.ViewHolder {
@@ -163,13 +221,16 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
     }
 
     public static RemoteViews fill(Context context, JSONObject json, ReportInfo info, int urgMin, int urgMax) {
-        logger.d("Fill", json, info.fields);
+//        logger.d("Fill", json, info.fields);
+        String status = json.optString("status", "pending");
+        boolean pending = "pending".equalsIgnoreCase(status);
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.item_one_task);
         views.setViewVisibility(R.id.task_urgency, info.fields.containsKey("urgency")? View.VISIBLE: View.GONE);
-        views.setViewVisibility(R.id.task_priority, info.fields.containsKey("priority")? View.VISIBLE: View.GONE);
-        views.setImageViewResource(R.id.task_status_btn, status2icon(json.optString("status")));
+        views.setViewVisibility(R.id.task_priority, info.fields.containsKey("priority") ? View.VISIBLE : View.GONE);
+        views.setImageViewResource(R.id.task_status_btn, status2icon(status));
         views.setViewVisibility(R.id.task_annotations, View.GONE);
         views.setViewVisibility(R.id.task_annotations_flag, View.GONE);
+        views.setViewVisibility(R.id.task_start_stop_btn, View.GONE);
         for (Map.Entry<String, String> field : info.fields.entrySet()) {
             if (field.getKey().equalsIgnoreCase("description")) {
                 // Show title
@@ -230,8 +291,13 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
             }
             if (field.getKey().equalsIgnoreCase("start")) {
                 String started = asDate(json.optString("start"), field.getValue(), formattedFormatDT);
-                if (!TextUtils.isEmpty(started)) {
+                boolean isStarted = !TextUtils.isEmpty(started);
+                if (isStarted) {
                     views.setViewVisibility(R.id.task_start_flag, View.VISIBLE);
+                }
+                if (pending) { // Can be started/stopped
+                    views.setViewVisibility(R.id.task_start_stop_btn, View.VISIBLE);
+                    views.setImageViewResource(R.id.task_start_stop_btn, isStarted? R.drawable.ic_action_stop: R.drawable.ic_action_start);
                 }
             }
         }

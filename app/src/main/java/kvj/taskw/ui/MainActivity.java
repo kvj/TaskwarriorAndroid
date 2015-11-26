@@ -6,10 +6,10 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
+import android.support.v4.widget.ContentLoadingProgressBar;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -17,7 +17,6 @@ import android.view.SubMenu;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.PopupMenu;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import org.json.JSONObject;
@@ -52,7 +51,7 @@ public class MainActivity extends AppCompatActivity {
         }
     };
     private FloatingActionButton addButton = null;
-    private ProgressBar progressBar = null;
+    private ContentLoadingProgressBar progressBar = null;
     private AccountController.TaskListener progressListener = null;
     private TextView accountNameDisplay = null;
     private ViewGroup header = null;
@@ -87,10 +86,10 @@ public class MainActivity extends AppCompatActivity {
             });
         list = (MainList) getSupportFragmentManager().findFragmentById(R.id.list_list_fragment);
         addButton = (FloatingActionButton) findViewById(R.id.list_add_btn);
-        progressBar = (ProgressBar) findViewById(R.id.list_progress);
+        progressBar = (ContentLoadingProgressBar) findViewById(R.id.list_progress);
+        progressBar.hide();
         accountNameDisplay = (TextView) header.findViewById(R.id.list_nav_account_name);
         setSupportActionBar(toolbar);
-        toolbar.setNavigationIcon(getDrawerToggleDelegate().getThemeUpIndicator());
         toolbar.setNavigationOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -121,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onDelete(JSONObject json) {
-                doOp(String.format("Delete task '%s'?", json.optString("description")), json.optString("uuid"), "delete");
+                doOp(String.format("Task '%s' deleted", json.optString("description")), json.optString("uuid"), "delete");
             }
 
             @Override
@@ -132,12 +131,19 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onDenotate(JSONObject json, JSONObject annJson) {
                 String text = annJson.optString("description");
-                doOp(String.format("Delete annotation '%s'?", text), json.optString("uuid"), "denotate", text);
+                doOp(String.format("Annotation '%s' deleted", text), json.optString("uuid"), "denotate", text);
             }
 
             @Override
             public void onStartStop(JSONObject json) {
-
+                String text = json.optString("description");
+                String uuid = json.optString("uuid");
+                boolean started = json.has("start");
+                if (started) { // Stop
+                    doOp(String.format("Task'%s' stopped", text), uuid, "stop");
+                } else { // Start
+                    doOp(String.format("Task '%s' started", text), uuid, "start");
+                }
             }
         });
         addButton.setOnClickListener(new View.OnClickListener() {
@@ -233,11 +239,11 @@ public class MainActivity extends AppCompatActivity {
         String description = json.optString("description");
         if ("pending".equalsIgnoreCase(status)) {
             // Mark as done
-            doOp(String.format("Complete task '%s'?", description), uuid, "done");
+            doOp(String.format("Task '%s' marked done", description), uuid, "done");
         }
     }
 
-    private void doOp(String message, final String uuid, final String op, final String... ops) {
+    private void doOp(final String message, final String uuid, final String op, final String... ops) {
         final String account = form.getValue(App.KEY_ACCOUNT);
         final Tasks.ActivitySimpleTask<String> task = new Tasks.ActivitySimpleTask<String>(this) {
 
@@ -261,30 +267,24 @@ public class MainActivity extends AppCompatActivity {
                 if (null != result) {
                     controller.messageLong(result);
                 } else {
+                    if (null != message) { // Show success message
+                        controller.messageShort(message);
+                    }
                     list.reload();
                 }
             }
         };
-        if (TextUtils.isEmpty(message)) {
-            task.exec();
-        } else {
-            controller.question(this, message, new Runnable() {
-                @Override
-                public void run() {
-                    task.exec();
-                }
-            }, null);
-        }
+        task.exec();
     }
 
-    private static AccountController.TaskListener setupProgressListener(final Activity activity, final View bar) {
+    private static AccountController.TaskListener setupProgressListener(final Activity activity, final ContentLoadingProgressBar bar) {
         return new AccountController.TaskListener() {
             @Override
             public void onStart() {
                 activity.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        bar.setVisibility(View.VISIBLE);
+                        bar.show();
                     }
                 });
             }
@@ -294,7 +294,7 @@ public class MainActivity extends AppCompatActivity {
                 activity.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        bar.setVisibility(View.GONE);
+                        bar.hide();
                     }
                 });
             }

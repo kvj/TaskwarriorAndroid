@@ -101,6 +101,10 @@
                                     android:id="@+id/task_edit_btn"
                                     style="@style/IconButton"
                                     android:src="@drawable/ic_action_edit"/>
+                            <android.widget.ImageButton
+                                android:id="@+id/task_start_stop_btn"
+                                style="@style/IconButton"
+                                android:src="@drawable/ic_action_stop"/>
                         </LinearLayout>
                         <android.widget.ImageButton
                                 android:id="@+id/task_more_btn"
