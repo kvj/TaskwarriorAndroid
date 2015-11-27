@@ -1,6 +1,8 @@
 package kvj.taskw;
 
 
+import android.accounts.Account;
+
 import kvj.taskw.data.Controller;
 
 /**
@@ -27,6 +29,7 @@ public class App extends org.kvj.bravo7.ng.App<Controller> {
     public static final String KEY_EDIT_TEXT = "editor_text";
     public static final int ANNOTATE_REQUEST = 3;
     public static final String KEY_EDIT_STATUS = "editor_status";
+    public static final String ACCOUNT_FOLDER = "folder";
 
     @Override
     protected Controller create() {
@@ -36,8 +39,8 @@ public class App extends org.kvj.bravo7.ng.App<Controller> {
     @Override
     protected void init() {
         Controller controller = App.controller();
-        for (String name : controller.accounts()) {
-            controller.accountController(name); // This will schedule sync
+        for (Account acc : controller.accounts()) {
+            controller.accountController(controller.accountID(acc)); // This will schedule sync
         }
     }
 }

@@ -14,15 +14,20 @@ import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.text.TextUtils;
 
+import org.kvj.bravo7.form.FormController;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import kvj.taskw.App;
 import kvj.taskw.R;
@@ -86,15 +91,32 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
         if (accounts.length == 0) {
             return null;
         }
-        return accounts[0].name;
+        return accountID(accounts[0]);
     }
 
-    public Collection<String> accounts() {
+    public Collection<Account> accounts() {
         Account[] accounts = accountManager.getAccountsByType(App.ACCOUNT_TYPE);
-        List<String> result = new ArrayList<>();
+        List<Account> result = new ArrayList<>();
         for (Account acc : accounts) {
-            result.add(acc.name);
+            result.add(acc);
         }
+        return result;
+    }
+
+    public List<String> accountFolders() {
+        List<String> result = new ArrayList<>();
+        File[] files = context().getExternalFilesDir(null).listFiles();
+        for (File file : files) {
+            if (file.isDirectory() && !file.getName().startsWith(".")) {
+                result.add(file.getName());
+            }
+        }
+        Collections.sort(result, new Comparator<String>() {
+            @Override
+            public int compare(String lhs, String rhs) {
+                return lhs.compareToIgnoreCase(rhs);
+            }
+        });
         return result;
     }
 
@@ -109,45 +131,62 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
           }, null);
     }
 
-    public boolean hasAccount(String text) {
-        for (Account acc : accountManager.getAccountsByType(App.ACCOUNT_TYPE)) {
-            if (acc.name.equalsIgnoreCase(text)) {
-                return true;
-            }
-        }
-        return false;
+    public String accountID(Account acc) {
+        String folderName = accountManager.getUserData(acc, App.ACCOUNT_FOLDER);
+        if (!TextUtils.isEmpty(folderName)) return folderName;
+        return acc.name;
     }
 
-    public boolean createAccount(String name) {
+    public Account account(String id) {
+        for (Account acc : accountManager.getAccountsByType(App.ACCOUNT_TYPE)) {
+            if (accountID(acc).equalsIgnoreCase(id)) {
+                return acc;
+            }
+        }
+        return null;
+    }
+
+    public String createAccount(String name, String folderName) {
+        if (TextUtils.isEmpty(name)) {
+            return "Account name is mandatory";
+        }
         try {
-            File folder = new File(context().getExternalFilesDir(null), name.toLowerCase());
+            if (TextUtils.isEmpty(folderName)) {
+                folderName = UUID.randomUUID().toString().toLowerCase();
+            }
+            if (null != account(folderName)) {
+                return "Duplicate account";
+            }
+            File folder = new File(context().getExternalFilesDir(null), folderName);
             if (!folder.exists()) {
                 if (!folder.mkdir()) {
                     logger.w("Failed to create folder", name);
-                    return false;
+                    return "Storage access error";
                 }
             }
             File taskrc = new File(folder, AccountController.TASKRC);
             if (!taskrc.exists()) {
                 if (!taskrc.createNewFile()) {
                     logger.w("Failed to create folder", name);
-                    return false;
+                    return "Storage access error";
                 }
             }
             File dataFolder = new File(folder, AccountController.DATA_FOLDER);
             if (!dataFolder.exists()) {
                 if (!dataFolder.mkdir()) {
                     logger.w("Failed to create data folder", dataFolder.getAbsolutePath());
-                    return false;
+                    return "Storage access error";
                 }
             }
-            if (!accountManager.addAccountExplicitly(new Account(name, App.ACCOUNT_TYPE), "", new Bundle())) {
+            Bundle data = new Bundle();
+            data.putString(App.ACCOUNT_FOLDER, folderName);
+            if (!accountManager.addAccountExplicitly(new Account(name, App.ACCOUNT_TYPE), "", data)) {
                 logger.w("Failed to create account", name);
-                return false;
+                return "Account create failure";
             }
-            return true;
+            return null;
         } catch (Exception e) {
-            return false;
+            return e.getMessage();
         }
     }
 
@@ -155,8 +194,16 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
         return accountController(name, false);
     }
 
+    public AccountController accountController(FormController form) {
+        return accountController(form.getValue(App.KEY_ACCOUNT, String.class));
+    }
+
     public synchronized AccountController accountController(String name, boolean reinit) {
         if (TextUtils.isEmpty(name)) {
+            return null;
+        }
+        Account acc = account(name);
+        if (null == acc) {
             return null;
         }
         AccountController current = controllerMap.get(name);
@@ -164,7 +211,7 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
             if (null != current) {
                 current.stop(); // Cancel all schedules
             }
-            controllerMap.put(name, new AccountController(this, name));
+            controllerMap.put(name, new AccountController(this, accountID(acc), acc.name));
         }
         return controllerMap.get(name);
     }

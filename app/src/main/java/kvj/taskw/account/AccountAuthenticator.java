@@ -15,13 +15,21 @@ import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.Spinner;
 
+import org.kvj.bravo7.form.FormController;
+import org.kvj.bravo7.form.impl.ViewFinder;
+import org.kvj.bravo7.form.impl.widget.SpinnerIntegerAdapter;
+import org.kvj.bravo7.form.impl.widget.TextViewCharSequenceAdapter;
 import org.kvj.bravo7.log.Logger;
 
+import java.util.List;
+
 import kvj.taskw.App;
-import kvj.taskw.data.Controller;
 import kvj.taskw.R;
+import kvj.taskw.data.Controller;
 
 /**
  * Created by vorobyev on 11/17/15.
@@ -98,10 +106,11 @@ public class AccountAuthenticator extends AbstractAccountAuthenticator {
     public static class AccountAddDialog extends AppCompatActivity {
 
         Controller controller = App.controller();
-        private EditText input;
         private View okButton;
         private AccountAuthenticatorResponse mAccountAuthenticatorResponse;
         private Bundle mResultBundle = null;
+        private FormController form = new FormController(new ViewFinder.ActivityViewFinder(this));
+        private List<String> folders = null;
 
         @Override
         protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -113,43 +122,29 @@ public class AccountAuthenticator extends AbstractAccountAuthenticator {
                 mAccountAuthenticatorResponse.onRequestContinued();
             }
             setContentView(R.layout.dialog_add_account);
-            input = (EditText) findViewById(R.id.add_account_input);
+            form.add(new TextViewCharSequenceAdapter(R.id.add_account_input, ""), "input");
+            form.add(new SpinnerIntegerAdapter(R.id.add_account_folder, 0), "folder");
+            folders = controller.accountFolders();
+            folders.add(0, "<<Create new>>");
+            ArrayAdapter<String>
+                adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, folders);
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            form.getView("folder", Spinner.class).setAdapter(adapter);
             okButton = findViewById(R.id.add_account_ok_btn);
-            okButton.setEnabled(false); // Wait for input
-            input.addTextChangedListener(new TextWatcher() {
-                @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                }
-
-                @Override
-                public void onTextChanged(CharSequence s, int start, int before, int count) {
-                }
-
-                @Override
-                public void afterTextChanged(Editable s) {
-                    String text = s.toString().trim();
-                    okButton.setEnabled(false);
-                    if (!TextUtils.isEmpty(text)) {
-                        if (!controller.hasAccount(text)) {
-                            okButton.setEnabled(true);
-                        } else {
-                            controller.messageShort("Account already exists");
-                        }
-                    }
-                }
-            });
             okButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    String name = input.getText().toString().trim();
-                    if (controller.createAccount(name)) {
+                    String name = form.getValue("input");
+                    int folderIndex = form.getValue("folder");
+                    String err = controller.createAccount(name, folderIndex > 0? folders.get(folderIndex): null);
+                    if (err == null) {
                         mResultBundle = new Bundle();
                         mResultBundle.putString(AccountManager.KEY_ACCOUNT_NAME, name);
                         mResultBundle
                             .putString(AccountManager.KEY_ACCOUNT_TYPE, App.ACCOUNT_TYPE);
                         finish();
                     } else {
-                        controller.messageShort("Failed to create account");
+                        controller.messageLong(err);
                     }
                 }
             });

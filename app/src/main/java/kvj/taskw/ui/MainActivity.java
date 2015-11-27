@@ -1,5 +1,6 @@
 package kvj.taskw.ui;
 
+import android.accounts.Account;
 import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
@@ -17,6 +18,7 @@ import android.view.SubMenu;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.PopupMenu;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import org.json.JSONObject;
@@ -51,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
         }
     };
     private FloatingActionButton addButton = null;
-    private ContentLoadingProgressBar progressBar = null;
+    private ProgressBar progressBar = null;
     private AccountController.TaskListener progressListener = null;
     private TextView accountNameDisplay = null;
     private ViewGroup header = null;
@@ -86,8 +88,7 @@ public class MainActivity extends AppCompatActivity {
             });
         list = (MainList) getSupportFragmentManager().findFragmentById(R.id.list_list_fragment);
         addButton = (FloatingActionButton) findViewById(R.id.list_add_btn);
-        progressBar = (ContentLoadingProgressBar) findViewById(R.id.list_progress);
-        progressBar.hide();
+        progressBar = (ProgressBar) findViewById(R.id.list_progress);
         accountNameDisplay = (TextView) header.findViewById(R.id.list_nav_account_name);
         setSupportActionBar(toolbar);
         toolbar.setNavigationOnClickListener(new View.OnClickListener() {
@@ -170,9 +171,9 @@ public class MainActivity extends AppCompatActivity {
         PopupMenu menu = new PopupMenu(this, btn);
         menu.inflate(R.menu.menu_account);
         int index = 0;
-        for (String accountName : controller.accounts()) {
-            menu.getMenu().add(R.id.menu_account_list, index++, 0, accountName)
-                .setOnMenuItemClickListener(newAccountMenu(accountName));
+        for (Account account : controller.accounts()) {
+            menu.getMenu().add(R.id.menu_account_list, index++, 0, account.name)
+                .setOnMenuItemClickListener(newAccountMenu(controller.accountID(account)));
         }
         menu.setOnMenuItemClickListener(accountMenuListener);
         menu.show();
@@ -277,14 +278,14 @@ public class MainActivity extends AppCompatActivity {
         task.exec();
     }
 
-    private static AccountController.TaskListener setupProgressListener(final Activity activity, final ContentLoadingProgressBar bar) {
+    private static AccountController.TaskListener setupProgressListener(final Activity activity, final ProgressBar bar) {
         return new AccountController.TaskListener() {
             @Override
             public void onStart() {
                 activity.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        bar.show();
+                        bar.setVisibility(View.VISIBLE);
                     }
                 });
             }
@@ -294,7 +295,7 @@ public class MainActivity extends AppCompatActivity {
                 activity.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        bar.hide();
+                        bar.setVisibility(View.GONE);
                     }
                 });
             }
@@ -337,7 +338,8 @@ public class MainActivity extends AppCompatActivity {
         if (checkAccount()) {
             addButton.setEnabled(true);
             accountController().listeners().add(progressListener);
-            accountNameDisplay.setText(form.getValue(App.KEY_ACCOUNT, String.class));
+            AccountController ac = controller.accountController(form);
+            accountNameDisplay.setText(ac.name());
         }
     }
 

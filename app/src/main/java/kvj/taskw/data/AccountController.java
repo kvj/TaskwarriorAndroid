@@ -81,6 +81,10 @@ public class AccountController {
         return null; // Success
     }
 
+    public String name() {
+        return accountName;
+    }
+
     public interface TaskListener {
         public void onStart();
         public void onFinish();
@@ -99,7 +103,7 @@ public class AccountController {
     public static final String TASKRC = ".taskrc.android";
     public static final String DATA_FOLDER = "data";
     private final Controller controller;
-    private final String name;
+    private final String id;
     private boolean active = false;
     private final String socketName;
 
@@ -131,10 +135,10 @@ public class AccountController {
     private StreamConsumer errConsumer = new ToLogConsumer(Logger.LoggerLevel.Warning, "ERR:");
     private StreamConsumer outConsumer = new ToLogConsumer(Logger.LoggerLevel.Info, "STD:");
 
-    public AccountController(Controller controller, String name) {
+    public AccountController(Controller controller, String folder, String name) {
         this.controller = controller;
         this.accountName = name;
-        this.name = name.toLowerCase();
+        this.id = folder;
         tasksFolder = initTasksFolder();
         socketName = UUID.randomUUID().toString().toLowerCase();
         syncSocket = openLocalSocket(socketName);
@@ -424,7 +428,7 @@ public class AccountController {
     }
 
     private File initTasksFolder() {
-        File folder = new File(controller.context().getExternalFilesDir(null), name);
+        File folder = new File(controller.context().getExternalFilesDir(null), id);
         if (!folder.exists() || !folder.isDirectory()) {
             return null;
         }
@@ -618,7 +622,7 @@ public class AccountController {
     }
 
     public boolean intentForEditor(Intent intent, String uuid) {
-        intent.putExtra(App.KEY_ACCOUNT, accountName);
+        intent.putExtra(App.KEY_ACCOUNT, id);
         List<String> priorities = taskPriority();
         if (TextUtils.isEmpty(uuid)) { // Done - new item
             intent.putExtra(App.KEY_EDIT_PRIORITY, priorities.indexOf(""));
@@ -741,8 +745,8 @@ public class AccountController {
 
     public PendingIntent syncIntent(String type) {
         Intent intent = new Intent(controller.context(), SyncIntentReceiver.class);
-        intent.putExtra(App.KEY_ACCOUNT, accountName);
-        intent.setData(Uri.fromParts("tw", type, accountName));
+        intent.putExtra(App.KEY_ACCOUNT, id);
+        intent.setData(Uri.fromParts("tw", type, id));
         return PendingIntent.getBroadcast(controller.context(), App.SYNC_REQUEST, intent, PendingIntent.FLAG_CANCEL_CURRENT);
     }
 }

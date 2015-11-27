@@ -53,7 +53,7 @@ public class EditorActivity extends AppCompatActivity {
 
             @Override
             protected List<String> doInBackground() {
-                return controller.accountController(form.getValue(App.KEY_ACCOUNT, String.class)).taskPriority();
+                return controller.accountController(form).taskPriority();
             }
 
             @Override

@@ -13,6 +13,17 @@
                 android:singleLine="true"
                 android:layout_height="wrap_content"/>
     </android.support.design.widget.TextInputLayout>
+    <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+            android:textColor="@color/colorAccent"
+            android:text="Data folder:"/>
+    <Spinner
+            android:id="@+id/add_account_folder"
+            style="@style/Base.Widget.AppCompat.Spinner.Underlined"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
     <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
