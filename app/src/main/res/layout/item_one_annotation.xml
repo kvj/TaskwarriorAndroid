@@ -10,6 +10,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+            style="@style/ClickableText"
             android:text="Some annotation"/>
     <LinearLayout
             android:layout_width="match_parent"

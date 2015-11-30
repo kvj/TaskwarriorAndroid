@@ -52,7 +52,7 @@ public class ReportInfo {
                         int result = ((String)lo).compareTo((String) ro);
                         if (result == 0)
                             continue;
-                        return result;
+                        return result * (entry.getValue()? 1: -1);
                     }
                 }
                 return 0;

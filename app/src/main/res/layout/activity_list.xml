@@ -20,6 +20,32 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_weight="0"/>
+            <LinearLayout
+                    android:id="@+id/list_filter_block"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0"
+                    android:visibility="gone"
+                    android:orientation="horizontal">
+                <android.support.design.widget.TextInputLayout
+                        android:layout_weight="1"
+                        android:layout_width="0dp"
+                        android:layout_gravity="center"
+                        android:layout_height="wrap_content">
+                    <EditText
+                            android:hint="Query"
+                            android:id="@+id/list_filter"
+                            android:layout_width="match_parent"
+                            android:singleLine="true"
+                            android:layout_height="wrap_content"/>
+                </android.support.design.widget.TextInputLayout>
+                <android.widget.ImageButton
+                        android:id="@+id/list_filter_btn"
+                        android:layout_gravity="center_vertical"
+                        style="@style/IconButton"
+                        android:src="@drawable/ic_action_send"
+                        android:layout_weight="0"/>
+            </LinearLayout>
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="0dp"

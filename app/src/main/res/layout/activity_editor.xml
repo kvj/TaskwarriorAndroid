@@ -11,15 +11,27 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_weight="0"/>
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
-        <fragment
-            android:id="@+id/editor_editor"
+    <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            class="kvj.taskw.ui.Editor"/>
-    </ScrollView>
+            android:layout_height="0dp"
+            android:layout_weight="1">
+        <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+            <fragment
+                    android:id="@+id/editor_editor"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    class="kvj.taskw.ui.Editor"/>
+        </ScrollView>
+        <ProgressBar
+                style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+                android:visibility="gone"
+                android:id="@+id/editor_progress"
+                android:layout_alignParentTop="true"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:indeterminate="true"/>
+    </RelativeLayout>
 
 </LinearLayout>

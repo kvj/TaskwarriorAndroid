@@ -28,8 +28,8 @@
                 android:id="@+id/editor_priority"
                 android:layout_gravity="bottom"
                 android:layout_weight="0"
-                android:minWidth="40dp"
-                android:layout_width="0dp"
+                android:minWidth="50dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"/>
     </LinearLayout>
     <LinearLayout

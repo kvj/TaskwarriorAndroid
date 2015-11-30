@@ -11,6 +11,7 @@ import android.support.v4.widget.ContentLoadingProgressBar;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -19,13 +20,17 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.PopupMenu;
 import android.widget.ProgressBar;
+import android.widget.RemoteViews;
 import android.widget.TextView;
 
 import org.json.JSONObject;
 import org.kvj.bravo7.form.FormController;
+import org.kvj.bravo7.form.impl.ViewFinder;
 import org.kvj.bravo7.form.impl.bundle.StringBundleAdapter;
+import org.kvj.bravo7.form.impl.widget.TextViewCharSequenceAdapter;
 import org.kvj.bravo7.form.impl.widget.TransientAdapter;
 import org.kvj.bravo7.log.Logger;
+import org.kvj.bravo7.util.DataUtil;
 import org.kvj.bravo7.util.Tasks;
 
 import java.util.Map;
@@ -43,8 +48,10 @@ public class MainActivity extends AppCompatActivity {
     private Toolbar toolbar = null;
     private DrawerLayout navigationDrawer = null;
     private NavigationView navigation = null;
+    private ViewGroup filterPanel = null;
 
-    private FormController form = new FormController(null);
+
+    private FormController form = new FormController(new ViewFinder.ActivityViewFinder(this));
     private MainList list = null;
     private Runnable updateTitleAction = new Runnable() {
         @Override
@@ -69,7 +76,6 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
     };
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -90,6 +96,7 @@ public class MainActivity extends AppCompatActivity {
         addButton = (FloatingActionButton) findViewById(R.id.list_add_btn);
         progressBar = (ProgressBar) findViewById(R.id.list_progress);
         accountNameDisplay = (TextView) header.findViewById(R.id.list_nav_account_name);
+        filterPanel = (ViewGroup) findViewById(R.id.list_filter_block);
         setSupportActionBar(toolbar);
         toolbar.setNavigationOnClickListener(new View.OnClickListener() {
             @Override
@@ -121,7 +128,8 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onDelete(JSONObject json) {
-                doOp(String.format("Task '%s' deleted", json.optString("description")), json.optString("uuid"), "delete");
+                doOp(String.format("Task '%s' deleted", json.optString("description")),
+                     json.optString("uuid"), "delete");
             }
 
             @Override
@@ -132,7 +140,13 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onDenotate(JSONObject json, JSONObject annJson) {
                 String text = annJson.optString("description");
-                doOp(String.format("Annotation '%s' deleted", text), json.optString("uuid"), "denotate", text);
+                doOp(String.format("Annotation '%s' deleted", text), json.optString("uuid"),
+                     "denotate", text);
+            }
+
+            @Override
+            public void onCopyText(JSONObject json, String text) {
+                controller.copyToClipboard(text);
             }
 
             @Override
@@ -157,7 +171,24 @@ public class MainActivity extends AppCompatActivity {
         form.add(new TransientAdapter<>(new StringBundleAdapter(), null), App.KEY_ACCOUNT);
         form.add(new TransientAdapter<>(new StringBundleAdapter(), null), App.KEY_REPORT);
         form.add(new TransientAdapter<>(new StringBundleAdapter(), null), App.KEY_QUERY);
+        form.add(new TextViewCharSequenceAdapter(R.id.list_filter, null), App.KEY_QUERY_INPUT);
         form.load(this, savedInstanceState);
+        findViewById(R.id.list_filter_btn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String input = form.getValue(App.KEY_QUERY_INPUT);
+                form.setValue(App.KEY_QUERY, input);
+                logger.d("Changed filter:", form.getValue(App.KEY_QUERY), input);
+                reload();
+            }
+        });
+    }
+
+    private void reload() {
+        // Show/hide filter
+        String query = form.getValue(App.KEY_QUERY);
+        filterPanel.setVisibility(TextUtils.isEmpty(query)? View.GONE: View.VISIBLE);
+        list.load(form, updateTitleAction);
     }
 
     private void annotate(JSONObject json) {
@@ -278,10 +309,12 @@ public class MainActivity extends AppCompatActivity {
         task.exec();
     }
 
-    private static AccountController.TaskListener setupProgressListener(final Activity activity, final ProgressBar bar) {
+    public static AccountController.TaskListener setupProgressListener(final Activity activity, final ProgressBar bar) {
+        final Controller controller = App.controller();
         return new AccountController.TaskListener() {
             @Override
             public void onStart() {
+                if (null == bar) return;
                 activity.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -292,10 +325,32 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onFinish() {
+                if (null == bar) return;
                 activity.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         bar.setVisibility(View.GONE);
+                    }
+                });
+            }
+
+            @Override
+            public void onQuestion(final String question, final DataUtil.Callback<Boolean> callback) {
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        // Show dialog
+                        controller.question(activity, question, new Runnable() {
+                            @Override
+                            public void run() {
+                                callback.call(true);
+                            }
+                        }, new Runnable() {
+                            @Override
+                            public void run() {
+                                callback.call(false);
+                            }
+                        });
                     }
                 });
             }
@@ -337,7 +392,7 @@ public class MainActivity extends AppCompatActivity {
         addButton.setEnabled(false);
         if (checkAccount()) {
             addButton.setEnabled(true);
-            accountController().listeners().add(progressListener);
+            accountController().listeners().add(progressListener, true);
             AccountController ac = controller.accountController(form);
             accountNameDisplay.setText(ac.name());
         }
@@ -410,6 +465,7 @@ public class MainActivity extends AppCompatActivity {
                             form.setValue(App.KEY_REPORT, key);
                             form.setValue(App.KEY_QUERY, null);
                             list.load(form, updateTitleAction);
+                            reload();
                             return false;
                         }
                     });
@@ -429,8 +485,16 @@ public class MainActivity extends AppCompatActivity {
             case R.id.menu_tb_undo:
                 undo();
                 break;
+            case R.id.menu_tb_filter:
+                showFilter();
+                break;
         }
         return true;
+    }
+
+    private void showFilter() {
+        filterPanel.setVisibility(View.VISIBLE);
+        form.getView(App.KEY_QUERY_INPUT).requestFocus();
     }
 
     private void undo() {

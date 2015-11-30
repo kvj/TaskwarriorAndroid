@@ -9,6 +9,7 @@ import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.ProgressBar;
 
 import org.kvj.bravo7.form.FormController;
 import org.kvj.bravo7.form.impl.ViewFinder;
@@ -37,6 +38,7 @@ public class EditorActivity extends AppCompatActivity {
     Controller controller = App.controller();
     Logger logger = Logger.forInstance(this);
     private List<String> priorities = null;
+    private AccountController.TaskListener progressListener = null;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -44,11 +46,13 @@ public class EditorActivity extends AppCompatActivity {
         setContentView(R.layout.activity_editor);
         toolbar = (Toolbar) findViewById(R.id.editor_toolbar);
         editor = (Editor) getSupportFragmentManager().findFragmentById(R.id.editor_editor);
+        ProgressBar progressBar = (ProgressBar) findViewById(R.id.editor_progress);
         setSupportActionBar(toolbar);
         form.add(new TransientAdapter<>(new StringBundleAdapter(), null), App.KEY_ACCOUNT);
         form.add(new TransientAdapter<>(new StringBundleAdapter(), null), App.KEY_EDIT_UUID);
         editor.initForm(form);
         form.load(this, savedInstanceState);
+        progressListener = MainActivity.setupProgressListener(this, progressBar);
         new Tasks.ActivitySimpleTask<List<String>>(this){
 
             @Override
@@ -86,6 +90,18 @@ public class EditorActivity extends AppCompatActivity {
                 break;
         }
         return true;
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        controller.accountController(form).listeners().add(progressListener, true);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        controller.accountController(form).listeners().remove(progressListener);
     }
 
     @Override

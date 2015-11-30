@@ -11,20 +11,24 @@ import android.text.TextUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.kvj.bravo7.log.Logger;
+import org.kvj.bravo7.util.DataUtil;
 import org.kvj.bravo7.util.Listeners;
 import org.kvj.bravo7.util.Tasks;
 
 import java.io.BufferedReader;
+import java.io.CharArrayWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.CharBuffer;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -32,6 +36,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -47,6 +52,7 @@ import kvj.taskw.ui.MainListAdapter;
  */
 public class AccountController {
 
+    private static final String CONFIRM_YN = " (yes/no) ";
     private final String accountName;
     private Thread acceptThread = null;
 
@@ -85,9 +91,27 @@ public class AccountController {
         return accountName;
     }
 
+    private static String[] defaultFields = {"description", "urgency", "priority", "due", "wait", "scheduled", "recur", "until", "project", "tags"};
+
+    public ReportInfo createQueryInfo(String query) {
+        ReportInfo info = new ReportInfo();
+        info.description = query;
+        info.sort.put("urgency", false);
+        info.sort.put("description", false);
+        info.query = query;
+        if (!query.toLowerCase().contains("status:"))
+            info.query += " status:pending";
+        info.priorities = taskPriority();
+        for (String f : defaultFields) {
+            info.fields.put(f, "");
+        }
+        return info;
+    }
+
     public interface TaskListener {
         public void onStart();
         public void onFinish();
+        public void onQuestion(String question, DataUtil.Callback<Boolean> callback);
     }
 
     private Listeners<TaskListener> taskListeners = new Listeners<TaskListener>() {
@@ -378,6 +402,9 @@ public class AccountController {
             }
         }, errConsumer, "show", String.format("report.%s", name));
         info.priorities = taskPriority();
+        if (!info.sort.containsKey("description")) {
+            info.sort.put("description", true);
+        }
         return info;
     }
 
@@ -395,10 +422,11 @@ public class AccountController {
         return result;
     }
 
-    private Thread readStream(InputStream stream, final StreamConsumer consumer) {
-        final BufferedReader reader;
+    private Thread readStream(InputStream stream, final OutputStream outputStream,
+                              final StreamConsumer consumer) {
+        final Reader reader;
         try {
-            reader = new BufferedReader(new InputStreamReader(stream, "utf-8"));
+            reader = new InputStreamReader(stream, "utf-8");
         } catch (UnsupportedEncodingException e) {
             logger.e("Error opening stream");
             return null;
@@ -406,11 +434,51 @@ public class AccountController {
         Thread thread = new Thread() {
             @Override
             public void run() {
-                String line;
+
                 try {
-                    while ((line = reader.readLine()) != null) {
+                    CharArrayWriter line = new CharArrayWriter();
+                    int ch = -1;
+                    while ((ch = reader.read()) >= 0) {
+                        if (ch == '\n') {
+                            // New line
+                            if (null != consumer) {
+                                consumer.eat(line.toString());
+                                line.reset();
+                            }
+                            continue;
+                        }
+                        line.write(ch);
+                        if (null != outputStream && line.size() > CONFIRM_YN.length()) {
+                            if (line.toString().substring(line.size()-CONFIRM_YN.length()).equals(
+                                CONFIRM_YN)) {
+                                // Ask for confirmation
+                                final String question = line.toString().substring(0, line.size()
+                                                                                     - CONFIRM_YN
+                                                                                         .length()).trim();
+                                listeners().emit(new Listeners.ListenerEmitter<TaskListener>() {
+                                    @Override
+                                    public boolean emit(TaskListener listener) {
+                                        listener.onQuestion(question, new DataUtil.Callback<Boolean>() {
+                                            @Override
+                                            public boolean call(Boolean value) {
+                                                try {
+                                                    outputStream.write(String.format("%s\n", value? "yes": "no").getBytes("utf-8"));
+                                                } catch (IOException e) {
+                                                    e.printStackTrace();
+                                                }
+                                                return true;
+                                            }
+                                        });
+                                        return true; // Only one call
+                                    }
+                                });
+                            }
+                        }
+                    }
+                    if (line.size() > 0) {
+                        // Last line
                         if (null != consumer) {
-                            consumer.eat(line);
+                            consumer.eat(line.toString());
                         }
                     }
                 } catch (Exception e) {
@@ -463,10 +531,10 @@ public class AccountController {
             pb.environment().put("TASKDATA", new File(tasksFolder, DATA_FOLDER).getAbsolutePath());
             Process p = pb.start();
             logger.d("Calling now:", tasksFolder, args);
-            Thread outThread = readStream(p.getInputStream(), out);
-            Thread errThread = readStream(p.getErrorStream(), err);
+            Thread outThread = readStream(p.getInputStream(), p.getOutputStream(), out);
+            Thread errThread = readStream(p.getErrorStream(), null, err);
             int exitCode = p.waitFor();
-            logger.d("Exit code:", exitCode, arguments.length);
+            logger.d("Exit code:", exitCode, args);
             if (null != outThread) outThread.join();
             if (null != errThread) errThread.join();
             return 0 == exitCode;

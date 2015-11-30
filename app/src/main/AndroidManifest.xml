@@ -26,6 +26,18 @@
             </intent-filter>
         </activity>
         <activity
+                android:name=".ui.TextEditor"
+                android:theme="@style/AppTheme"
+                android:exported="true"
+                android:windowSoftInputMode="adjustResize"
+                android:label="Textwarrior Text editor">
+            <intent-filter>
+                <action android:name="android.intent.action.EDIT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/*"/>
+            </intent-filter>
+        </activity>
+        <activity
             android:name=".account.AccountAuthenticator$AccountAddDialog"
             android:theme="@style/AppThemeDialog"
             android:excludeFromRecents="true">

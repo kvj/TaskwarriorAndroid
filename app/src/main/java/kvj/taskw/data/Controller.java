@@ -7,7 +7,10 @@ import android.accounts.AccountManagerFuture;
 import android.app.Activity;
 import android.app.Notification;
 import android.app.PendingIntent;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.NotificationCompat;
@@ -16,10 +19,15 @@ import android.text.TextUtils;
 
 import org.kvj.bravo7.form.FormController;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -48,6 +56,74 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
         accountManager = AccountManager.get(context);
         executable = eabiExecutable();
         notificationManager = NotificationManagerCompat.from(context);
+    }
+
+    public File fileFromIntentUri(Intent intent) {
+        if (null == intent) return null;
+        if (TextUtils.isEmpty(intent.getDataString())) return null;
+        if (!"file".equals(intent.getData().getScheme())) {
+            logger.w("Requested Uri is not file", intent.getData().getScheme(), intent.getData());
+            return null;
+        }
+        try {
+            File file = new File(intent.getData().getPath());
+            if (!file.isFile() && !file.exists()) {
+                logger.w("Invalid file:", file);
+                return null;
+            }
+            if (!file.canRead() || !file.canWrite()) {
+                logger.w("Invalid file access:", file, file.canRead(), file.canWrite());
+                return null;
+            }
+            return file;
+        } catch (Exception e) {
+            logger.e(e, "Error getting file:", intent.getData(), intent.getData().getPath());
+        }
+        return null;
+    }
+
+    public String readFile(File file) {
+        StringBuilder result = new StringBuilder();
+        try {
+            String line;
+            BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file), "utf-8"));
+            while ((line = br.readLine()) != null) {
+                result.append(line);
+                result.append('\n');
+            }
+            br.close();
+            return result.toString();
+        } catch (Exception e) {
+            logger.e(e, "Error reading file", file.getAbsolutePath());
+            return null;
+        }
+    }
+
+    public Boolean saveFile(String fileName, String text) {
+        try {
+            File output = new File(fileName);
+            if (!output.exists() || !output.canWrite()) {
+                logger.d("Invalid file:", output);
+                return false;
+            }
+            Writer writer = new OutputStreamWriter(new FileOutputStream(output), "utf-8");
+            writer.write(text);
+            writer.close();
+            return true;
+        } catch (Exception e) {
+            logger.e(e, "Failed to write file:", fileName);
+            return false;
+        }
+    }
+
+    public void copyToClipboard(String text) {
+        ClipData clip = ClipData.newPlainText(text, text);
+        getClipboard().setPrimaryClip(clip);
+        messageShort("Copied to clipboard");
+    }
+
+    private ClipboardManager getClipboard() {
+        return (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
     }
 
     private enum Arch {Arm7, X86};

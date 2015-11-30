@@ -30,6 +30,9 @@ public class App extends org.kvj.bravo7.ng.App<Controller> {
     public static final int ANNOTATE_REQUEST = 3;
     public static final String KEY_EDIT_STATUS = "editor_status";
     public static final String ACCOUNT_FOLDER = "folder";
+    public static final String KEY_TEXT_INPUT = "text_editor_input";
+    public static final String KEY_TEXT_TARGET = "text_editor_target";
+    public static final String KEY_QUERY_INPUT = "query_input";
 
     @Override
     protected Controller create() {

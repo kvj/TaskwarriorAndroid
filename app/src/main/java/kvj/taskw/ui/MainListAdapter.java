@@ -46,6 +46,7 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
         public void onAnnotate(JSONObject json);
         public void onStartStop(JSONObject json);
         public void onDenotate(JSONObject json, JSONObject annJson);
+        public void onCopyText(JSONObject json, String text);
     }
 
     List<JSONObject> data = new ArrayList<>();
@@ -61,6 +62,21 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
     @Override
     public int getItemCount() {
         return data.size();
+    }
+
+    private void bindLongCopyText(final JSONObject json, View view, final String text) {
+        if (TextUtils.isEmpty(text) || view == null || json == null) {
+            return;
+        }
+        view.setOnLongClickListener(
+            new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View v) {
+                    logger.d("Long click on description", json);
+                    if (null != listener) listener.onCopyText(json, text);
+                    return true;
+                }
+            });
     }
 
     @Override
@@ -80,6 +96,7 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
                 annotations.setVisibility(visible ? View.GONE : View.VISIBLE);
             }
         });
+        bindLongCopyText(json, holder.card.findViewById(R.id.task_description), json.optString("description"));
         holder.card.findViewById(R.id.task_edit_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -123,10 +140,14 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
         if (null != annotationsArr && annotationsArr.length() == annotations.getChildCount()) {
             // Bind delete button
             for (int i = 0; i < annotationsArr.length(); i++) { // Show and bind delete button
+                JSONObject jsonAnn = annotationsArr.optJSONObject(i);
+                bindLongCopyText(json,
+                                 annotations.getChildAt(i).findViewById(R.id.task_ann_text),
+                                 jsonAnn.optString("description"));
                 View deleteBtn = annotations.getChildAt(i).findViewById(R.id.task_ann_delete_btn);
                 if (null != deleteBtn) {
                     deleteBtn.setVisibility(View.VISIBLE);
-                    deleteBtn.setOnClickListener(denotate(json, annotationsArr.optJSONObject(i)));
+                    deleteBtn.setOnClickListener(denotate(json, jsonAnn));
                 }
             }
         }
@@ -343,7 +364,6 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
         }
         try {
             Date parsed = jsonFormat.parse(due);
-            logger.d("Parsed", parsed, due);
             return format.format(parsed);
         } catch (Exception e) {
             logger.e(e, "Failed to parse Date:", due);
