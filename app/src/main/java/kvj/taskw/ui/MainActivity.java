@@ -232,6 +232,11 @@ public class MainActivity extends AppCompatActivity {
                     refreshAccount(account);
                 }
                 break;
+            case R.id.menu_nav_run:
+                if (null != accountController) {
+                    startActivity(accountController.intentForRunTask());
+                }
+                break;
             case R.id.menu_nav_settings:
                 // Open taskrc for editing
                 if (null != accountController) {

@@ -8,6 +8,10 @@
         </menu>
     </item>
     <item
+            android:id="@+id/menu_nav_run"
+            android:title="Run custom..."
+            android:icon="@drawable/ic_action_start"/>
+    <item
             android:id="@+id/menu_nav_settings"
             android:title="Settings"
             android:icon="@drawable/ic_action_settings"/>

@@ -50,6 +50,9 @@
         <activity android:name=".ui.EditorActivity"
             android:theme="@style/AppThemeD">
         </activity>
+        <activity android:name=".ui.RunActivity"
+                  android:theme="@style/AppThemeD">
+        </activity>
         <service
                 android:name=".account.AccountAuthenticator$Service"
                 android:exported="true">

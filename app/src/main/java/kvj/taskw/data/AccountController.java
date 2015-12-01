@@ -46,6 +46,7 @@ import kvj.taskw.App;
 import kvj.taskw.R;
 import kvj.taskw.sync.SSLHelper;
 import kvj.taskw.ui.MainListAdapter;
+import kvj.taskw.ui.RunActivity;
 
 /**
  * Created by vorobyev on 11/17/15.
@@ -106,6 +107,13 @@ public class AccountController {
             info.fields.put(f, "");
         }
         return info;
+    }
+
+    public int taskCustom(String command, StreamConsumer out, StreamConsumer err) {
+        int result = callTask(out, err, false, command.split(" "));
+        err.eat("");
+        err.eat(String.format("Exit code: %d", result));
+        return result;
     }
 
     public interface TaskListener {
@@ -183,6 +191,20 @@ public class AccountController {
 
         private String text() {
             return builder.toString();
+        }
+    }
+
+    public static class ListAggregator implements StreamConsumer {
+
+        List<String> data = new ArrayList<>();
+
+        @Override
+        public void eat(String line) {
+            data.add(line);
+        }
+
+        public List<String> data() {
+            return data;
         }
     }
 
@@ -503,7 +525,7 @@ public class AccountController {
         return folder;
     }
 
-    private synchronized boolean callTask(StreamConsumer out, StreamConsumer err, String... arguments) {
+    private synchronized int callTask(StreamConsumer out, StreamConsumer err, boolean api, String... arguments) {
         active = true;
         taskListeners.emit(new Listeners.ListenerEmitter<TaskListener>() {
             @Override
@@ -522,8 +544,12 @@ public class AccountController {
             List<String> args = new ArrayList<>();
             args.add(controller.executable);
             args.add("rc.color=off");
-            args.add("rc.confirmation=off");
-            args.add("rc.verbose=nothing");
+            if (api) {
+                args.add("rc.confirmation=off");
+                args.add("rc.verbose=nothing");
+            } else {
+                args.add("rc.verbose=none");
+            }
             Collections.addAll(args, arguments);
             ProcessBuilder pb = new ProcessBuilder(args);
             pb.directory(controller.context().getFilesDir());
@@ -537,11 +563,11 @@ public class AccountController {
             logger.d("Exit code:", exitCode, args);
             if (null != outThread) outThread.join();
             if (null != errThread) errThread.join();
-            return 0 == exitCode;
+            return exitCode;
         } catch (Exception e) {
             logger.e(e, "Failed to execute task");
             err.eat(e.getMessage());
-            return false;
+            return 255;
         } finally {
             taskListeners.emit(new Listeners.ListenerEmitter<TaskListener>() {
                 @Override
@@ -552,6 +578,11 @@ public class AccountController {
             });
             active = false;
         }
+    }
+
+    private boolean callTask(StreamConsumer out, StreamConsumer err, String... arguments) {
+        int result = callTask(out, err, true, arguments);
+        return result == 0;
     }
 
     private class LocalSocketThread extends Thread {
@@ -687,6 +718,12 @@ public class AccountController {
 
     public static String escape(String query) {
         return query.replace(" ", "\\ "); //.replace("(", "\\(").replace(")", "\\)");
+    }
+
+    public Intent intentForRunTask() {
+        Intent intent = new Intent(controller.context(), RunActivity.class);
+        intent.putExtra(App.KEY_ACCOUNT, id);
+        return intent;
     }
 
     public boolean intentForEditor(Intent intent, String uuid) {
