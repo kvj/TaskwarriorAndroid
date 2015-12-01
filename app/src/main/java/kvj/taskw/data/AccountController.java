@@ -116,6 +116,10 @@ public class AccountController {
         return result;
     }
 
+    public String id() {
+        return id;
+    }
+
     public interface TaskListener {
         public void onStart();
         public void onFinish();

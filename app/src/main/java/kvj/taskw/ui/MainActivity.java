@@ -63,6 +63,7 @@ public class MainActivity extends AppCompatActivity {
     private ProgressBar progressBar = null;
     private AccountController.TaskListener progressListener = null;
     private TextView accountNameDisplay = null;
+    private TextView accountNameID = null;
     private ViewGroup header = null;
     private PopupMenu.OnMenuItemClickListener accountMenuListener = new PopupMenu.OnMenuItemClickListener() {
         @Override
@@ -76,6 +77,7 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
     };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -96,6 +98,7 @@ public class MainActivity extends AppCompatActivity {
         addButton = (FloatingActionButton) findViewById(R.id.list_add_btn);
         progressBar = (ProgressBar) findViewById(R.id.list_progress);
         accountNameDisplay = (TextView) header.findViewById(R.id.list_nav_account_name);
+        accountNameID = (TextView) header.findViewById(R.id.list_nav_account_id);
         filterPanel = (ViewGroup) findViewById(R.id.list_filter_block);
         setSupportActionBar(toolbar);
         toolbar.setNavigationOnClickListener(new View.OnClickListener() {
@@ -400,6 +403,7 @@ public class MainActivity extends AppCompatActivity {
             accountController().listeners().add(progressListener, true);
             AccountController ac = controller.accountController(form);
             accountNameDisplay.setText(ac.name());
+            accountNameID.setText(ac.id());
         }
     }
 

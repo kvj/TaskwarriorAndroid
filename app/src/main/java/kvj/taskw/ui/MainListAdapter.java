@@ -87,13 +87,16 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
         holder.card.addView(card.apply(holder.itemView.getContext(), holder.card));
         final View bottomBtns = holder.card.findViewById(R.id.task_bottom_btns);
         final ViewGroup annotations = (ViewGroup) holder.card.findViewById(R.id.task_annotations);
+        final View id = holder.card.findViewById(R.id.task_id);
         bottomBtns.setVisibility(View.GONE);
         holder.card.findViewById(R.id.task_more_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 boolean visible = bottomBtns.getVisibility() == View.VISIBLE;
-                bottomBtns.setVisibility(visible ? View.GONE : View.VISIBLE);
-                annotations.setVisibility(visible ? View.GONE : View.VISIBLE);
+                int newVisibility = visible ? View.GONE : View.VISIBLE;
+                bottomBtns.setVisibility(newVisibility);
+                annotations.setVisibility(newVisibility);
+                id.setVisibility(newVisibility);
             }
         });
         bindLongCopyText(json, holder.card.findViewById(R.id.task_description), json.optString("description"));
@@ -270,6 +273,9 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
                         }
                     }
                 }
+            }
+            if (field.getKey().equalsIgnoreCase("id")) {
+                views.setTextViewText(R.id.task_id, String.format("[%d]", json.optInt("id", -1)));
             }
             if (field.getKey().equalsIgnoreCase("priority")) {
                 int index = info.priorities.indexOf(json.optString("priority", ""));

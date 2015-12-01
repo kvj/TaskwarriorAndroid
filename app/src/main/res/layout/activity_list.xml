@@ -16,7 +16,6 @@
                 app:navigationIcon="@drawable/ic_action_tb_menu"
                 app:titleTextColor="@color/colorPrimaryText"
                 app:subtitleTextColor="@color/colorPrimaryText"
-                android:background="@color/colorPrimary"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_weight="0"/>
