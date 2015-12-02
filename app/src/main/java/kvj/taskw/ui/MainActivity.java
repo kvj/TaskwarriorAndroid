@@ -45,6 +45,7 @@ public class MainActivity extends AppCompatActivity {
     Logger logger = Logger.forInstance(this);
 
     Controller controller = App.controller();
+    private AccountController ac = null;
     private Toolbar toolbar = null;
     private DrawerLayout navigationDrawer = null;
     private NavigationView navigation = null;
@@ -190,7 +191,7 @@ public class MainActivity extends AppCompatActivity {
     private void reload() {
         // Show/hide filter
         String query = form.getValue(App.KEY_QUERY);
-        filterPanel.setVisibility(TextUtils.isEmpty(query)? View.GONE: View.VISIBLE);
+        filterPanel.setVisibility(TextUtils.isEmpty(query) ? View.GONE : View.VISIBLE);
         list.load(form, updateTitleAction);
     }
 
@@ -227,31 +228,26 @@ public class MainActivity extends AppCompatActivity {
 
     private void onNavigationMenu(MenuItem item) {
         final String account = form.getValue(App.KEY_ACCOUNT);
-        AccountController accountController = controller.accountController(account);
+        if (null == ac) return;
         navigationDrawer.closeDrawers();
+
         switch (item.getItemId()) {
             case R.id.menu_nav_reload:
-                if (null != accountController) {
-                    refreshAccount(account);
-                }
+                refreshAccount(account);
                 break;
             case R.id.menu_nav_run:
-                if (null != accountController) {
-                    startActivity(accountController.intentForRunTask());
-                }
+                startActivity(ac.intentForRunTask());
                 break;
             case R.id.menu_nav_settings:
                 // Open taskrc for editing
-                if (null != accountController) {
-                    Intent intent = new Intent(Intent.ACTION_EDIT);
-                    Uri uri = Uri.parse(String.format("file://%s", accountController.taskrc().getAbsolutePath()));
-                    intent.setDataAndType(uri, "text/plain");
-                    try {
-                        startActivity(intent);
-                    } catch (Exception e) {
-                        logger.e(e, "Failed to edit file");
-                        controller.messageLong("No suitable plain text editors found");
-                    }
+                Intent intent = new Intent(Intent.ACTION_EDIT);
+                Uri uri = Uri.parse(String.format("file://%s", ac.taskrc().getAbsolutePath()));
+                intent.setDataAndType(uri, "text/plain");
+                try {
+                    startActivity(intent);
+                } catch (Exception e) {
+                    logger.e(e, "Failed to edit file");
+                    controller.messageLong("No suitable plain text editors found");
                 }
                 break;
         }
@@ -267,8 +263,14 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void finish(AccountController result) {
-                refreshReports();
-                controller.messageShort("Refreshed");
+                ac = result;
+                if (null != ac) {
+                    // Refreshed
+                    refreshReports();
+                    controller.messageShort("Refreshed");
+                } else {
+                    MainActivity.this.finish(); // Close
+                }
             }
         }.exec();
     }
@@ -284,21 +286,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void doOp(final String message, final String uuid, final String op, final String... ops) {
-        final String account = form.getValue(App.KEY_ACCOUNT);
+        if (ac == null) return;
         final Tasks.ActivitySimpleTask<String> task = new Tasks.ActivitySimpleTask<String>(this) {
 
             @Override
             protected String doInBackground() {
                 if ("done".equalsIgnoreCase(op))
-                    return controller.accountController(account).taskDone(uuid);
+                    return ac.taskDone(uuid);
                 if ("delete".equalsIgnoreCase(op))
-                    return controller.accountController(account).taskDelete(uuid);
+                    return ac.taskDelete(uuid);
                 if ("start".equalsIgnoreCase(op))
-                    return controller.accountController(account).taskStart(uuid);
+                    return ac.taskStart(uuid);
                 if ("stop".equalsIgnoreCase(op))
-                    return controller.accountController(account).taskStop(uuid);
+                    return ac.taskStop(uuid);
                 if ("denotate".equalsIgnoreCase(op))
-                    return controller.accountController(account).taskDenotate(uuid, ops[0]);
+                    return ac.taskDenotate(uuid, ops[0]);
                 return "Not supported operation";
             }
 
@@ -366,16 +368,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void add() {
+        if (null == ac) return;
         Intent intent = new Intent(this, EditorActivity.class);
-        final String account = form.getValue(App.KEY_ACCOUNT);
-        controller.accountController(account).intentForEditor(intent, null);
+        ac.intentForEditor(intent, null);
         startActivityForResult(intent, App.EDIT_REQUEST);
     }
 
     private void edit(JSONObject json) {
+        if (null == ac) return;
         Intent intent = new Intent(this, EditorActivity.class);
-        final String account = form.getValue(App.KEY_ACCOUNT);
-        if (controller.accountController(account).intentForEditor(intent, json.optString("uuid"))) { //
+        if (ac.intentForEditor(intent, json.optString("uuid"))) { // Valid task
             startActivityForResult(intent, App.EDIT_REQUEST);
         } else {
             controller.messageShort("Invalid task");
@@ -400,28 +402,24 @@ public class MainActivity extends AppCompatActivity {
         addButton.setEnabled(false);
         if (checkAccount()) {
             addButton.setEnabled(true);
-            accountController().listeners().add(progressListener, true);
-            AccountController ac = controller.accountController(form);
+            ac.listeners().add(progressListener, true);
             accountNameDisplay.setText(ac.name());
             accountNameID.setText(ac.id());
+            refreshReports();
         }
     }
 
     @Override
     protected void onDestroy() {
-        if (null != accountController()) {
-            accountController().listeners().remove(progressListener);
+        if (null != ac) {
+            ac.listeners().remove(progressListener);
         }
         super.onDestroy();
     }
 
-    private AccountController accountController() {
-        return controller.accountController(form.getValue(App.KEY_ACCOUNT, String.class));
-    }
-
     private boolean checkAccount() {
-        if (null != form.getValue(App.KEY_ACCOUNT)) { // Have account
-            refreshReports();
+        ac = controller.accountController(form);
+        if (null != ac) { // Have account
             return true;
         }
         String account = controller.currentAccount();
@@ -432,18 +430,17 @@ public class MainActivity extends AppCompatActivity {
         } else {
             logger.d("Refresh account:", account);
             form.setValue(App.KEY_ACCOUNT, account);
-            refreshReports();
+            ac = controller.accountController(form); // Should be not null always
         }
         return true;
     }
 
     private void refreshReports() {
-        final String account = form.getValue(App.KEY_ACCOUNT);
         new Tasks.ActivitySimpleTask<Map<String, String>>(this){
 
             @Override
             protected Map<String, String> doInBackground() {
-                return controller.accountController(account).taskReports();
+                return ac.taskReports();
             }
 
             @Override
@@ -507,10 +504,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void undo() {
-        final AccountController ac = controller.accountController(form.getValue(App.KEY_ACCOUNT, String.class));
-        if (null == ac) {
-            return;
-        }
+        if (null == ac) return;
         new Tasks.ActivitySimpleTask<String>(this){
 
             @Override
@@ -530,26 +524,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void sync() {
-        final String account = form.getValue(App.KEY_ACCOUNT);
-        if (null != account) { // Do sync
-            new Tasks.ActivitySimpleTask<String>(this){
+        if (null == ac) return;
+        new Tasks.ActivitySimpleTask<String>(this){
 
-                @Override
-                protected String doInBackground() {
-                    return controller.accountController(account).taskSync();
-                }
+            @Override
+            protected String doInBackground() {
+                return ac.taskSync();
+            }
 
-                @Override
-                public void finish(String result) {
-                    if (null != result) { // Error
-                        controller.messageShort(result);
-                    } else {
-                        controller.messageShort("Sync success");
-                        list.reload();
-                    }
+            @Override
+            public void finish(String result) {
+                if (null != result) { // Error
+                    controller.messageShort(result);
+                } else {
+                    controller.messageShort("Sync success");
+                    list.reload();
                 }
-            }.exec();
-        }
+            }
+        }.exec();
     }
 
     @Override

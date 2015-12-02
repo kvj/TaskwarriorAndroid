@@ -39,6 +39,7 @@ public class EditorActivity extends AppCompatActivity {
     Logger logger = Logger.forInstance(this);
     private List<String> priorities = null;
     private AccountController.TaskListener progressListener = null;
+    private AccountController ac = null;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -52,12 +53,18 @@ public class EditorActivity extends AppCompatActivity {
         form.add(new TransientAdapter<>(new StringBundleAdapter(), null), App.KEY_EDIT_UUID);
         editor.initForm(form);
         form.load(this, savedInstanceState);
+        ac = controller.accountController(form);
+        if (null == ac) {
+            finish();
+            controller.messageShort("Invalid arguments");
+            return;
+        }
         progressListener = MainActivity.setupProgressListener(this, progressBar);
         new Tasks.ActivitySimpleTask<List<String>>(this){
 
             @Override
             protected List<String> doInBackground() {
-                return controller.accountController(form).taskPriority();
+                return ac.taskPriority();
             }
 
             @Override
@@ -95,13 +102,13 @@ public class EditorActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        controller.accountController(form).listeners().add(progressListener, true);
+        ac.listeners().add(progressListener, true);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        controller.accountController(form).listeners().remove(progressListener);
+        ac.listeners().remove(progressListener);
     }
 
     @Override
@@ -171,8 +178,6 @@ public class EditorActivity extends AppCompatActivity {
             }
         }
         String uuid = form.getValue(App.KEY_EDIT_UUID);
-        AccountController ac = controller.accountController(
-            form.getValue(App.KEY_ACCOUNT, String.class));
         boolean completed = form.getValue(App.KEY_EDIT_STATUS, Integer.class) > 0;
         logger.d("Saving change:", uuid, changes, completed);
         if (TextUtils.isEmpty(uuid)) { // Add new

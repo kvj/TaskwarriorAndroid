@@ -110,13 +110,13 @@ public class RunActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        controller.accountController(form).listeners().add(progressListener, true);
+        ac.listeners().add(progressListener, true);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        controller.accountController(form).listeners().remove(progressListener);
+        ac.listeners().remove(progressListener);
     }
 
     class RunAdapter extends RecyclerView.Adapter<RunAdapter.RunAdapterItem> {
