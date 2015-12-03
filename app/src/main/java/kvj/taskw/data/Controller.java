@@ -10,14 +10,20 @@ import android.app.PendingIntent;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.design.widget.TextInputLayout;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
+import android.support.v7.app.AlertDialog;
 import android.text.TextUtils;
+import android.widget.EditText;
+import android.widget.TextView;
 
 import org.kvj.bravo7.form.FormController;
+import org.kvj.bravo7.util.DataUtil;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -124,6 +130,23 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
 
     private ClipboardManager getClipboard() {
         return (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+    }
+
+    public boolean createShortcut(Intent shortcutIntent, String value) {
+        Intent addIntent = new Intent();
+        addIntent.putExtra(Intent.EXTRA_SHORTCUT_INTENT, shortcutIntent);
+        addIntent.putExtra(Intent.EXTRA_SHORTCUT_NAME, value);
+        addIntent.putExtra(Intent.EXTRA_SHORTCUT_ICON_RESOURCE,
+                           Intent.ShortcutIconResource.fromContext(context(), R.mipmap.ic_tw_logo));
+        addIntent.setAction("com.android.launcher.action.INSTALL_SHORTCUT");
+        try {
+            context().sendBroadcast(addIntent);
+            messageShort("Shortcut added");
+            return true;
+        } catch (Exception e) {
+            logger.d(e, "Failed to add shortcut");
+        }
+        return false;
     }
 
     private enum Arch {Arm7, X86};

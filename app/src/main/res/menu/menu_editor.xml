@@ -5,4 +5,8 @@
         android:title="Save"
         android:icon="@drawable/ic_action_save"
         app:showAsAction="always"></item>
+    <item
+            android:id="@+id/menu_tb_add_shortcut"
+            android:title="Add shortcut to home..."
+            app:showAsAction="never"></item>
 </menu>

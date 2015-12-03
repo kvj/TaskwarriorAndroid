@@ -2,6 +2,7 @@ package kvj.taskw.ui;
 
 import android.app.Activity;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -16,6 +17,7 @@ import org.kvj.bravo7.form.impl.ViewFinder;
 import org.kvj.bravo7.form.impl.bundle.StringBundleAdapter;
 import org.kvj.bravo7.form.impl.widget.TransientAdapter;
 import org.kvj.bravo7.log.Logger;
+import org.kvj.bravo7.util.DataUtil;
 import org.kvj.bravo7.util.Tasks;
 
 import java.util.ArrayList;
@@ -95,8 +97,28 @@ public class EditorActivity extends AppCompatActivity {
             case R.id.menu_tb_save:
                 doSave();
                 break;
+            case R.id.menu_tb_add_shortcut:
+                createShortcut();
+                break;
         }
         return true;
+    }
+
+    private void createShortcut() {
+        Bundle bundle = new Bundle();
+        form.save(bundle);
+        bundle.remove(App.KEY_EDIT_UUID); // Just in case
+        final Intent shortcutIntent = new Intent(this, EditorActivity.class);
+        shortcutIntent.putExtras(bundle);
+        shortcutIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        controller.input(this, "Shortcut name:", ac.name(), new DataUtil.Callback<CharSequence>() {
+
+            @Override
+            public boolean call(CharSequence value) {
+                controller.createShortcut(shortcutIntent, value.toString().trim());
+                return true;
+            }
+        }, null);
     }
 
     @Override

@@ -9,6 +9,8 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="com.android.launcher.permission.INSTALL_SHORTCUT" />
+
 
     <application
             android:name=".App"
@@ -36,6 +38,10 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/*"/>
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
         <activity
             android:name=".account.AccountAuthenticator$AccountAddDialog"
@@ -49,6 +55,10 @@
         </activity>
         <activity android:name=".ui.EditorActivity"
             android:theme="@style/AppThemeD">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
         <activity android:name=".ui.RunActivity"
                   android:theme="@style/AppThemeD">

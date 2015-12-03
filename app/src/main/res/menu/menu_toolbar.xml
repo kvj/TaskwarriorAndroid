@@ -4,4 +4,8 @@
     <item android:id="@+id/menu_tb_sync" android:title="Sync" android:icon="@drawable/ic_action_sync" app:showAsAction="ifRoom"></item>
     <item android:id="@+id/menu_tb_reload" android:title="Reload" android:icon="@drawable/ic_action_refresh" app:showAsAction="ifRoom"></item>
     <item android:id="@+id/menu_tb_filter" android:title="Custom filter..." android:icon="@drawable/ic_action_filter" app:showAsAction="ifRoom"></item>
+    <item
+            android:id="@+id/menu_tb_add_shortcut"
+            android:title="Add shortcut to home..."
+            app:showAsAction="never"></item>
 </menu>

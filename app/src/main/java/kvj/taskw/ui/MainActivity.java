@@ -494,8 +494,28 @@ public class MainActivity extends AppCompatActivity {
             case R.id.menu_tb_filter:
                 showFilter();
                 break;
+            case R.id.menu_tb_add_shortcut:
+                createShortcut();
+                break;
         }
         return true;
+    }
+
+    private void createShortcut() {
+        Bundle bundle = new Bundle();
+        form.save(bundle, App.KEY_ACCOUNT, App.KEY_REPORT, App.KEY_QUERY);
+        String name = bundle.getString(App.KEY_QUERY, bundle.getString(App.KEY_REPORT));
+        final Intent shortcutIntent = new Intent(this, MainActivity.class);
+        shortcutIntent.putExtras(bundle);
+        shortcutIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        controller.input(this, "Shortcut name:", name, new DataUtil.Callback<CharSequence>() {
+
+            @Override
+            public boolean call(CharSequence value) {
+                controller.createShortcut(shortcutIntent, value.toString().trim());
+                return true;
+            }
+        }, null);
     }
 
     private void showFilter() {
