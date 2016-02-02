@@ -15,7 +15,6 @@ import org.kvj.bravo7.util.DataUtil;
 import org.kvj.bravo7.util.Listeners;
 import org.kvj.bravo7.util.Tasks;
 
-import java.io.BufferedReader;
 import java.io.CharArrayWriter;
 import java.io.File;
 import java.io.FileInputStream;
@@ -28,7 +27,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.CharBuffer;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -36,7 +34,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -589,6 +586,17 @@ public class AccountController {
         return result == 0;
     }
 
+    private File fileFromConfig(String path) {
+        if (TextUtils.isEmpty(path)) { // Invalid path
+            return null;
+        }
+        if (path.startsWith("/")) { // Absolute
+            return new File(path);
+        }
+        // Relative
+        return new File(this.tasksFolder, path);
+    }
+
     private class LocalSocketThread extends Thread {
 
         private final Map<String, String> config;
@@ -630,9 +638,9 @@ public class AccountController {
                 int port = Integer.parseInt(host.substring(lastColon + 1));
                 host = host.substring(0, lastColon);
                 SSLSocketFactory factory = SSLHelper.tlsSocket(
-                    new FileInputStream(config.get("taskd.ca")),
-                    new FileInputStream(config.get("taskd.certificate")),
-                    new FileInputStream(config.get("taskd.key")));
+                    new FileInputStream(fileFromConfig(config.get("taskd.ca"))),
+                    new FileInputStream(fileFromConfig(config.get("taskd.certificate"))),
+                    new FileInputStream(fileFromConfig(config.get("taskd.key"))));
                 logger.d("Connecting to:", host, port);
                 remoteSocket = factory.createSocket(host, port);
                 InputStream localInput = socket.getInputStream();

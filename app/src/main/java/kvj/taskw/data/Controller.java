@@ -6,24 +6,17 @@ import android.accounts.AccountManagerCallback;
 import android.accounts.AccountManagerFuture;
 import android.app.Activity;
 import android.app.Notification;
-import android.app.PendingIntent;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
-import android.support.design.widget.TextInputLayout;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
-import android.support.v7.app.AlertDialog;
 import android.text.TextUtils;
-import android.widget.EditText;
-import android.widget.TextView;
 
 import org.kvj.bravo7.form.FormController;
-import org.kvj.bravo7.util.DataUtil;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -122,7 +115,7 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
         }
     }
 
-    public void copyToClipboard(String text) {
+    public void copyToClipboard(CharSequence text) {
         ClipData clip = ClipData.newPlainText(text, text);
         getClipboard().setPrimaryClip(clip);
         messageShort("Copied to clipboard");
@@ -186,11 +179,24 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
     }
 
     public String currentAccount() {
+        Account account = account(settings().settingsString(R.string.pref_account_id, ""));
+        if (null != account) {
+            return accountID(account);
+        }
+        // No default account
         Account[] accounts = accountManager.getAccountsByType(App.ACCOUNT_TYPE);
         if (accounts.length == 0) {
             return null;
         }
         return accountID(accounts[0]);
+    }
+
+    public boolean setDefault(String account) {
+        if (!TextUtils.isEmpty(account)) {
+            settings().stringSettings(R.string.pref_account_id, account);
+            return true;
+        }
+        return false;
     }
 
     public Collection<Account> accounts() {

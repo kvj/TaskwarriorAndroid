@@ -6,4 +6,7 @@
     <item
             android:id="@+id/menu_account_add"
             android:title="Add Account"/>
+    <item
+        android:id="@+id/menu_account_set_def"
+        android:title="Set default"/>
 </menu>

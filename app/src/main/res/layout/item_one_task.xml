@@ -41,6 +41,7 @@
                             android:textAppearance="@style/TextAppearance.AppCompat.Medium"
                             android:text="Task description"
                             android:layout_gravity="center_vertical"
+                            android:textColor="@color/colorText"
                             style="@style/ClickableText"
                             android:layout_weight="1"/>
                     <TextView

@@ -1,12 +1,17 @@
 package kvj.taskw.ui;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.ShareActionProvider;
 import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ProgressBar;
@@ -40,6 +45,7 @@ public class RunActivity extends AppCompatActivity {
     private AccountController ac = null;
     private RunAdapter adapter = null;
     private kvj.taskw.data.AccountController.TaskListener progressListener = null;
+    private ShareActionProvider mShareActionProvider = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,13 +69,60 @@ public class RunActivity extends AppCompatActivity {
         }
         adapter = new RunAdapter(form.getValue(App.KEY_RUN_OUTPUT, ArrayList.class));
         list.setAdapter(adapter);
-        findViewById(R.id.run_btn).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                run();
-            }
-        });
         toolbar.setSubtitle(ac.name());
+    }
+
+    private void shareAll() {
+        CharSequence text = adapter.allText();
+        if (TextUtils.isEmpty(text)) { // Error
+            controller.messageShort("Nothing to share");
+            return;
+        }
+        Intent sendIntent = new Intent();
+        sendIntent.setAction(Intent.ACTION_SEND);
+        sendIntent.putExtra(Intent.EXTRA_TEXT, text);
+        sendIntent.setType("text/plain");
+        if (null != mShareActionProvider) {
+            logger.d("Share provider set");
+            mShareActionProvider.setShareIntent(sendIntent);
+        }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_run, menu);
+
+        // Locate MenuItem with ShareActionProvider
+        MenuItem item = menu.findItem(R.id.menu_tb_run_share);
+
+        // Fetch and store ShareActionProvider
+        mShareActionProvider = (ShareActionProvider) MenuItemCompat.getActionProvider(item);
+
+        // Return true to display menu
+        return true;
+
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.menu_tb_run_run:
+                run();
+                return true;
+            case R.id.menu_tb_run_copy:
+                copyAll();
+                return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void copyAll() {
+        CharSequence text = adapter.allText();
+        if (TextUtils.isEmpty(text)) { // Error
+            controller.messageShort("Nothing to copy");
+            return;
+        }
+        controller.copyToClipboard(text);
     }
 
     private void run() {
@@ -91,9 +144,9 @@ public class RunActivity extends AppCompatActivity {
 
             @Override
             public void finish(Boolean result) {
-                // No op
                 out.data().addAll(err.data());
                 adapter.addAll(out.data());
+                shareAll();
             }
         }.exec();
     }
@@ -154,6 +207,17 @@ public class RunActivity extends AppCompatActivity {
             int from = getItemCount();
             this.data.addAll(data);
             notifyItemRangeInserted(from, data.size());
+        }
+
+        public CharSequence allText() {
+            StringBuilder sb = new StringBuilder();
+            for (String line : data) { // Copy to
+                if (sb.length() > 0) {
+                    sb.append('\n');
+                }
+                sb.append(line);
+            }
+            return sb;
         }
 
         class RunAdapterItem extends RecyclerView.ViewHolder implements View.OnLongClickListener {

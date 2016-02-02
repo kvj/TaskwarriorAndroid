@@ -5,9 +5,9 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
-import android.support.v4.widget.ContentLoadingProgressBar;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -20,7 +20,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.PopupMenu;
 import android.widget.ProgressBar;
-import android.widget.RemoteViews;
 import android.widget.TextView;
 
 import org.json.JSONObject;
@@ -72,6 +71,10 @@ public class MainActivity extends AppCompatActivity {
             switch (item.getItemId()) {
                 case R.id.menu_account_add:
                     controller.addAccount(MainActivity.this);
+                    break;
+                case R.id.menu_account_set_def:
+                    if (null == ac) return false;
+                    controller.setDefault(ac.id());
                     break;
             }
             navigationDrawer.closeDrawers();
@@ -321,21 +324,42 @@ public class MainActivity extends AppCompatActivity {
 
     public static AccountController.TaskListener setupProgressListener(final Activity activity, final ProgressBar bar) {
         final Controller controller = App.controller();
+        final Handler handler = new Handler(activity.getMainLooper());
         return new AccountController.TaskListener() {
+
+            int balance = 0;
+
             @Override
             public void onStart() {
+
                 if (null == bar) return;
-                activity.runOnUiThread(new Runnable() {
+                balance++;
+                handler.postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        bar.setVisibility(View.VISIBLE);
+                        if (balance == 0) {
+                            return;
+                        }
+                        activity.runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                bar.setVisibility(View.VISIBLE);
+                            }
+                        });
+
                     }
-                });
+                }, 750);
             }
 
             @Override
             public void onFinish() {
                 if (null == bar) return;
+                if (balance > 0) {
+                    balance--;
+                }
+                if (balance > 0) {
+                    return;
+                }
                 activity.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
