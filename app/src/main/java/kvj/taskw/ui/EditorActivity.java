@@ -47,9 +47,9 @@ public class EditorActivity extends AppCompatActivity {
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_editor);
-        toolbar = (Toolbar) findViewById(R.id.editor_toolbar);
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
         editor = (Editor) getSupportFragmentManager().findFragmentById(R.id.editor_editor);
-        ProgressBar progressBar = (ProgressBar) findViewById(R.id.editor_progress);
+        ProgressBar progressBar = (ProgressBar) findViewById(R.id.progress);
         setSupportActionBar(toolbar);
         form.add(new TransientAdapter<>(new StringBundleAdapter(), null), App.KEY_ACCOUNT);
         form.add(new TransientAdapter<>(new StringBundleAdapter(), null), App.KEY_EDIT_UUID);

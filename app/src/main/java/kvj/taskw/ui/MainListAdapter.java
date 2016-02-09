@@ -319,9 +319,6 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
             if (field.getKey().equalsIgnoreCase("start")) {
                 String started = asDate(json.optString("start"), field.getValue(), formattedFormatDT);
                 boolean isStarted = !TextUtils.isEmpty(started);
-                if (isStarted) {
-                    views.setViewVisibility(R.id.task_start_flag, View.VISIBLE);
-                }
                 if (pending) { // Can be started/stopped
                     views.setViewVisibility(R.id.task_start_stop_btn, View.VISIBLE);
                     views.setImageViewResource(R.id.task_start_stop_btn, isStarted? R.drawable.ic_action_stop: R.drawable.ic_action_start);

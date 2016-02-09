@@ -35,12 +35,12 @@ public class TextEditor extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_text_editor);
-        toolbar = (Toolbar) findViewById(R.id.text_editor_toolbar);
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         form.add(new TextViewCharSequenceAdapter(R.id.text_editor_input, null).trackOrigin(true), App.KEY_TEXT_INPUT);
         form.add(new TransientAdapter<>(new StringBundleAdapter(), null), App.KEY_TEXT_TARGET);
         form.load(this, savedInstanceState);
-        logger.d("On create:", form.getValue(App.KEY_TEXT_INPUT), form.getValue(App.KEY_TEXT_TARGET));
+//        logger.d("On create:", form.getValue(App.KEY_TEXT_INPUT), form.getValue(App.KEY_TEXT_TARGET));
         if (null == form.getValue(App.KEY_TEXT_TARGET)) {
             // No data - load from Uri
             loadText(getIntent());

@@ -83,18 +83,30 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="horizontal">
-                        <FrameLayout
+                        <LinearLayout
                                 android:layout_weight="1"
+                                android:orientation="horizontal"
                                 android:layout_width="0dp"
                                 android:layout_height="match_parent">
+                            <android.widget.ImageButton
+                                android:id="@+id/task_start_stop_btn"
+                                style="@style/IconButton"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_gravity="center_vertical"
+                                android:src="@drawable/ic_action_stop"/>
                             <android.widget.ImageView
-                                    android:id="@+id/task_annotations_flag"
-                                    style="@style/IconButton"
-                                    android:layout_width="24dp"
-                                    android:layout_height="24dp"
-                                    android:layout_gravity="center_vertical"
-                                    android:src="@drawable/ic_status_annotations"/>
-                        </FrameLayout>
+                                android:id="@+id/task_annotations_flag"
+                                style="@style/IconButton"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_gravity="center_vertical"
+                                android:src="@drawable/ic_status_annotations"/>
+                            <FrameLayout
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_weight="1"/>
+                        </LinearLayout>
                         <LinearLayout
                                 android:id="@+id/task_bottom_btns"
                                 android:layout_width="wrap_content"
@@ -113,10 +125,6 @@
                                     android:id="@+id/task_edit_btn"
                                     style="@style/IconButton"
                                     android:src="@drawable/ic_action_edit"/>
-                            <android.widget.ImageButton
-                                android:id="@+id/task_start_stop_btn"
-                                style="@style/IconButton"
-                                android:src="@drawable/ic_action_stop"/>
                         </LinearLayout>
                         <android.widget.ImageButton
                                 android:id="@+id/task_more_btn"

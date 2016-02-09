@@ -51,7 +51,7 @@ public class RunActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_run);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.run_toolbar);
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         RecyclerView list = (RecyclerView) findViewById(R.id.run_output);
         list.setLayoutManager(new LinearLayoutManager(this));
         setSupportActionBar(toolbar);
@@ -60,7 +60,7 @@ public class RunActivity extends AppCompatActivity {
         form.add(new TextViewCharSequenceAdapter(R.id.run_command, null), App.KEY_RUN_COMMAND);
         form.load(this, savedInstanceState);
         progressListener = MainActivity
-            .setupProgressListener(this, (ProgressBar) findViewById(R.id.run_progress));
+            .setupProgressListener(this, (ProgressBar) findViewById(R.id.progress));
         ac = controller.accountController(form);
         if (null == ac) {
             controller.messageShort("Invalid arguments");

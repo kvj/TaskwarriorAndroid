@@ -86,7 +86,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_list);
-        toolbar = (Toolbar) findViewById(R.id.list_toolbar);
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
         navigationDrawer = (DrawerLayout) findViewById(R.id.list_navigation_drawer);
         navigation = (NavigationView) findViewById(R.id.list_navigation);
         header = (ViewGroup) navigation.inflateHeaderView(R.layout.item_nav_header);
@@ -100,7 +100,7 @@ public class MainActivity extends AppCompatActivity {
             });
         list = (MainList) getSupportFragmentManager().findFragmentById(R.id.list_list_fragment);
         addButton = (FloatingActionButton) findViewById(R.id.list_add_btn);
-        progressBar = (ProgressBar) findViewById(R.id.list_progress);
+        progressBar = (ProgressBar) findViewById(R.id.progress);
         accountNameDisplay = (TextView) header.findViewById(R.id.list_nav_account_name);
         accountNameID = (TextView) header.findViewById(R.id.list_nav_account_id);
         filterPanel = (ViewGroup) findViewById(R.id.list_filter_block);

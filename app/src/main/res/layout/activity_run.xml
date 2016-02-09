@@ -4,7 +4,7 @@
     android:orientation="vertical" android:layout_width="match_parent"
     android:layout_height="match_parent">
     <android.support.v7.widget.Toolbar
-        android:id="@+id/run_toolbar"
+        android:id="@+id/toolbar"
         app:titleTextColor="@color/colorPrimaryText"
         app:subtitleTextColor="@color/colorPrimaryText"
         android:layout_width="match_parent"
@@ -46,7 +46,7 @@
         <ProgressBar
                 style="@style/Widget.AppCompat.ProgressBar.Horizontal"
                 android:visibility="gone"
-                android:id="@+id/run_progress"
+                android:id="@+id/progress"
                 android:layout_alignParentTop="true"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

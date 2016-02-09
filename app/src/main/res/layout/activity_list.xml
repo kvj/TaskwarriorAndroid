@@ -12,7 +12,7 @@
             android:layout_height="match_parent"
             android:orientation="vertical">
         <android.support.v7.widget.Toolbar
-                android:id="@+id/list_toolbar"
+                android:id="@+id/toolbar"
                 app:navigationIcon="@drawable/ic_action_tb_menu"
                 app:titleTextColor="@color/colorPrimaryText"
                 app:subtitleTextColor="@color/colorPrimaryText"
@@ -65,7 +65,7 @@
                 <ProgressBar
                     style="@style/Widget.AppCompat.ProgressBar.Horizontal"
                     android:visibility="gone"
-                    android:id="@+id/list_progress"
+                    android:id="@+id/progress"
                     android:layout_alignParentTop="true"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
