@@ -57,9 +57,9 @@
                 </LinearLayout>
                 <LinearLayout android:layout_width="match_parent"
                               android:layout_height="wrap_content"
-                              android:orientation="vertical"
-                        android:layout_marginLeft="8dp">
+                              android:orientation="vertical">
                     <LinearLayout
+                            android:layout_marginLeft="8dp"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="horizontal"
@@ -91,8 +91,6 @@
                             <android.widget.ImageButton
                                 android:id="@+id/task_start_stop_btn"
                                 style="@style/IconButton"
-                                android:layout_width="24dp"
-                                android:layout_height="24dp"
                                 android:layout_gravity="center_vertical"
                                 android:src="@drawable/ic_action_stop"/>
                             <android.widget.ImageView

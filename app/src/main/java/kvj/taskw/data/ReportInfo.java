@@ -33,10 +33,10 @@ public class ReportInfo {
                     Object lo = lhs.opt(entry.getKey());
                     Object ro = rhs.opt(entry.getKey());
                     if (lo == null && ro != null) {
-                        return entry.getValue()? 1: -1;
+                        return 1;
                     }
                     if (lo != null && ro == null) {
-                        return entry.getValue()? -1: 1;
+                        return -1;
                     }
                     if (lo == null && ro == null) {
                         continue;
