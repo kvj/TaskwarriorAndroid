@@ -16,6 +16,7 @@ import org.kvj.bravo7.log.Logger;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -291,18 +292,18 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
             }
             if (field.getKey().equalsIgnoreCase("due")) {
                 addLabel(context, views, true, R.drawable.ic_label_due,
-                         asDate(json.optString("due"), field.getValue(), formattedFormat));
+                         asDate(json.optString("due"), field.getValue(), null));
             }
             if (field.getKey().equalsIgnoreCase("wait")) {
-                addLabel(context, views, true, R.drawable.ic_label_wait, asDate(json.optString("wait"), field.getValue(), formattedFormat));
+                addLabel(context, views, true, R.drawable.ic_label_wait, asDate(json.optString("wait"), field.getValue(), null));
             }
             if (field.getKey().equalsIgnoreCase("scheduled")) {
-                addLabel(context, views, true, R.drawable.ic_label_scheduled, asDate(json.optString("scheduled"), field.getValue(), formattedFormat));
+                addLabel(context, views, true, R.drawable.ic_label_scheduled, asDate(json.optString("scheduled"), field.getValue(), null));
             }
             if (field.getKey().equalsIgnoreCase("recur")) {
                 String recur = json.optString("recur");
                 if (!TextUtils.isEmpty(recur) && info.fields.containsKey("until")) {
-                    String until = asDate(json.optString("until"), info.fields.get("until"), formattedFormat);
+                    String until = asDate(json.optString("until"), info.fields.get("until"), null);
                     if (!TextUtils.isEmpty(until)) {
                         recur += String.format(" ~ %s", until);
                     }
@@ -358,6 +359,7 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
 
     public static DateFormat formattedFormat = new SimpleDateFormat("yyyy-MM-dd");
     public static DateFormat formattedFormatDT = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+    public static DateFormat formattedISO = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm");
 
     public static String asDate(String due, String value, DateFormat format) {
         DateFormat jsonFormat = new SimpleDateFormat("yyyyMMdd'T'HHmmss");
@@ -367,6 +369,14 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
         }
         try {
             Date parsed = jsonFormat.parse(due);
+            if (null == format) { // Flexible -> date or date/time
+                Calendar c = Calendar.getInstance();
+                c.setTime(parsed);
+                if (c.get(Calendar.HOUR_OF_DAY) == 0 && c.get(Calendar.MINUTE) == 0) { // 00:00
+                    return formattedFormat.format(parsed); // Date
+                }
+                return formattedISO.format(parsed);
+            }
             return format.format(parsed);
         } catch (Exception e) {
             logger.e(e, "Failed to parse Date:", due);

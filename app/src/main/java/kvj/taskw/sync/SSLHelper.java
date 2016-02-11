@@ -3,15 +3,35 @@ package kvj.taskw.sync;
 import android.util.Base64;
 
 import org.kvj.bravo7.log.Logger;
+import org.kvj.bravo7.util.Compat;
 
-import javax.net.ssl.*;
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigInteger;
-import java.security.*;
-import java.security.cert.*;
+import java.security.GeneralSecurityException;
+import java.security.KeyFactory;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPrivateCrtKeySpec;
+
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
 
 import kvj.taskw.sync.der.DerInputStream;
 import kvj.taskw.sync.der.DerValue;
@@ -51,9 +71,9 @@ public class SSLHelper {
         return Base64.decode(b64.toString(), Base64.DEFAULT);
     }
 
-    protected static java.security.cert.Certificate loadCertificate(InputStream stream) throws CertificateException, FileNotFoundException {
+    protected static X509Certificate loadCertificate(InputStream stream) throws CertificateException, FileNotFoundException {
         CertificateFactory fact = CertificateFactory.getInstance("X.509");
-        return fact.generateCertificate(stream);
+        return (X509Certificate) fact.generateCertificate(stream);
     }
 
     protected static PrivateKey loadPrivateKey(InputStream stream) throws IOException, GeneralSecurityException {
@@ -79,7 +99,7 @@ public class SSLHelper {
         return factory.generatePrivate(keySpec);
     }
 
-    protected static KeyManagerFactory keyManagerFactoryPEM(InputStream certStream, InputStream keyStream) throws GeneralSecurityException, IOException {
+    protected static KeyManager[] keyManagerFactoryPEM(InputStream certStream, InputStream keyStream) throws GeneralSecurityException, IOException {
         KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
         Certificate cert = loadCertificate(certStream);
@@ -88,28 +108,82 @@ public class SSLHelper {
         keyStore.setCertificateEntry("certificate", cert);
         keyStore.setKeyEntry("private-key", loadPrivateKey(keyStream), "".toCharArray(), new Certificate[]{cert});
         kmf.init(keyStore, "".toCharArray());
-        return kmf;
+        return kmf.getKeyManagers();
     }
 
-    protected static TrustManagerFactory trustManagerFactoryPEM(InputStream stream) throws NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException {
+    public static TrustType parseTrustType(String trust) {
+        TrustType result = TrustType.Strict;
+        if ("ignore hostname".equals(trust)) {
+            result = SSLHelper.TrustType.Hostname;
+        }
+        if ("allow all".equals(trust)) {
+            result = SSLHelper.TrustType.All;
+        }
+        return result;
+    }
+
+    public enum TrustType {Strict, Hostname, All};
+
+    protected static TrustManager[] trustManagerFactoryPEM(InputStream stream, final TrustType trustType) throws NoSuchAlgorithmException, CertificateException, KeyStoreException, IOException {
         TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
         KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
         keyStore.load(null);
-        Certificate cert = loadCertificate(stream);
-//        logger.d("Truststore:", cert.getPublicKey().getAlgorithm(), cert.getPublicKey().getFormat());
+        final X509Certificate cert = loadCertificate(stream);
+        logger.d("Truststore:", cert.getIssuerDN().getName(), cert.getSubjectDN().getName());
         keyStore.setCertificateEntry("ca", cert);
         tmf.init(keyStore);
-        return tmf;
+        TrustManager[] orig = tmf.getTrustManagers();
+        TrustManager[] result = new TrustManager[orig.length+1];
+        System.arraycopy(orig, 0, result, 1, orig.length);
+        result[0] = new X509TrustManager() {
+            @Override
+            public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+            }
+
+            @Override
+            public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+                logger.d("Check server cert:", chain.length, authType, trustType);
+                for (X509Certificate c : chain) { // Check every cert
+                    logger.d("Check certificate:", c.getIssuerDN().getName(), c.getSubjectDN().getName());
+                }
+            }
+
+            @Override
+            public X509Certificate[] getAcceptedIssuers() {
+                logger.d("Issuers:");
+                return new X509Certificate[]{cert};
+            }
+        };
+        return orig; // Not finished
     }
 
-    protected static SSLSocketFactory tlsSocket(KeyManagerFactory kmf, TrustManagerFactory tmf) throws NoSuchAlgorithmException, KeyStoreException, IOException, CertificateException, InvalidKeySpecException, UnrecoverableKeyException, KeyManagementException, UnrecoverableKeyException {
-        SSLContext context = SSLContext.getInstance("TLSv1");
-        context.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+    protected static SSLSocketFactory tlsSocket(KeyManager[] kmf, TrustManager[] tmf) throws NoSuchAlgorithmException, KeyStoreException, IOException, CertificateException, InvalidKeySpecException, UnrecoverableKeyException, KeyManagementException, UnrecoverableKeyException {
+
+        SSLContext context = Compat.produceLevelAware(16, new Compat.Producer<SSLContext>() {
+            @Override
+            public SSLContext produce() {
+                try {
+                    return SSLContext.getInstance("TLSv1.2");
+                } catch (NoSuchAlgorithmException e) {
+                    return null;
+                }
+            }
+        }, new Compat.Producer<SSLContext>() {
+            @Override
+            public SSLContext produce() {
+                try {
+                    return SSLContext.getInstance("TLSv1");
+                } catch (NoSuchAlgorithmException e) {
+                    return null;
+                }
+            }
+        });
+        context.init(kmf, tmf, null);
         return context.getSocketFactory();
     }
 
-    public static SSLSocketFactory tlsSocket(InputStream caStream, InputStream certStream, InputStream keyStream)
+    public static SSLSocketFactory tlsSocket(InputStream caStream, InputStream certStream, InputStream keyStream, TrustType trustType)
         throws GeneralSecurityException, IOException {
-        return tlsSocket(keyManagerFactoryPEM(certStream, keyStream), trustManagerFactoryPEM(caStream));
+        return tlsSocket(keyManagerFactoryPEM(certStream, keyStream), trustManagerFactoryPEM(caStream, trustType));
     }
 }

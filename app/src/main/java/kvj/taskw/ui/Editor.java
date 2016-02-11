@@ -1,6 +1,7 @@
 package kvj.taskw.ui;
 
 import android.app.DatePickerDialog;
+import android.app.TimePickerDialog;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.text.TextUtils;
@@ -11,6 +12,7 @@ import android.widget.ArrayAdapter;
 import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.Spinner;
+import android.widget.TimePicker;
 
 import org.kvj.bravo7.form.FormController;
 import org.kvj.bravo7.form.impl.widget.ImageViewIntegerAdapter;
@@ -59,7 +61,7 @@ public class Editor extends Fragment {
 
 
 
-    public static Date fromInput(String text) {
+    private static Date dateFromInput(String text) {
         if (TextUtils.isEmpty(text)) {
             return null;
         }
@@ -71,12 +73,23 @@ public class Editor extends Fragment {
         return null;
     }
 
+    private static Date timeFromInput(String text) {
+        if (TextUtils.isEmpty(text)) {
+            return null;
+        }
+        try {
+            return MainListAdapter.formattedISO.parse(text); // With time
+        } catch (Exception e) {
+        }
+        return dateFromInput(text);
+    }
+
     private void setupDatePicker(View view, int text, int btn) {
         final EditText textInput = (EditText) view.findViewById(text);
         view.findViewById(btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Date dt = fromInput(textInput.getText().toString().trim());
+                Date dt = dateFromInput(textInput.getText().toString().trim());
                 if (null == dt) { // Invalid input
                     dt = new Date();
                 }
@@ -94,6 +107,29 @@ public class Editor extends Fragment {
                     }
                 }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH));
                 dialog.show();
+            }
+        });
+        view.findViewById(btn).setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                Date dt = timeFromInput(textInput.getText().toString().trim());
+                if (null == dt) { // Invalid input
+                    dt = new Date();
+                }
+                final Calendar c = Calendar.getInstance();
+                c.setTime(dt);
+                TimePickerDialog dialog = new TimePickerDialog(getContext(), new TimePickerDialog.OnTimeSetListener() {
+                    @Override
+                    public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
+//                        logger.d("Date set:", year, monthOfYear, dayOfMonth);
+                        c.set(Calendar.HOUR_OF_DAY, hourOfDay);
+                        c.set(Calendar.MINUTE, minute);
+                        c.set(Calendar.SECOND, 0);
+                        textInput.setText(MainListAdapter.formattedISO.format(c.getTime()));
+                    }
+                }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), true);
+                dialog.show();
+                return true;
             }
         });
     }

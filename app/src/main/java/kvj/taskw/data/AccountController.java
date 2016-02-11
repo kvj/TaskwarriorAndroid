@@ -11,6 +11,7 @@ import android.text.TextUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.kvj.bravo7.log.Logger;
+import org.kvj.bravo7.util.Compat;
 import org.kvj.bravo7.util.DataUtil;
 import org.kvj.bravo7.util.Listeners;
 import org.kvj.bravo7.util.Tasks;
@@ -24,7 +25,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
-import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
@@ -37,6 +37,7 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
 import kvj.taskw.App;
@@ -631,8 +632,9 @@ public class AccountController {
 
         @Override
         public void run() {
-            Socket remoteSocket = null;
+            SSLSocket remoteSocket = null;
             try {
+                SSLHelper.TrustType trustType = SSLHelper.parseTrustType(config.get("taskd.trust"));
                 String host = config.get("taskd.server");
                 int lastColon = host.lastIndexOf(":");
                 int port = Integer.parseInt(host.substring(lastColon + 1));
@@ -640,14 +642,26 @@ public class AccountController {
                 SSLSocketFactory factory = SSLHelper.tlsSocket(
                     new FileInputStream(fileFromConfig(config.get("taskd.ca"))),
                     new FileInputStream(fileFromConfig(config.get("taskd.certificate"))),
-                    new FileInputStream(fileFromConfig(config.get("taskd.key"))));
+                    new FileInputStream(fileFromConfig(config.get("taskd.key"))), trustType);
                 logger.d("Connecting to:", host, port);
-                remoteSocket = factory.createSocket(host, port);
+                remoteSocket = (SSLSocket) factory.createSocket(host, port);
+                final SSLSocket finalRemoteSocket = remoteSocket;
+                Compat.levelAware(16, new Runnable() {
+                    @Override
+                    public void run() {
+                        finalRemoteSocket.setEnabledProtocols(new String[]{"TLSv1", "TLSv1.1", "TLSv1.2"});
+                    }
+                }, new Runnable() {
+                    @Override
+                    public void run() {
+                        finalRemoteSocket.setEnabledProtocols(new String[]{"TLSv1"});
+                    }
+                });
                 InputStream localInput = socket.getInputStream();
                 OutputStream localOutput = socket.getOutputStream();
                 InputStream remoteInput = remoteSocket.getInputStream();
                 OutputStream remoteOutput = remoteSocket.getOutputStream();
-                logger.d("Connected, will read first piece");
+                logger.d("Connected, will read first piece", remoteSocket.getSession().getCipherSuite());
                 recvSend(localInput, remoteOutput);
                 recvSend(remoteInput, localOutput);
                 logger.d("Sync success");
@@ -670,7 +684,7 @@ public class AccountController {
 
     private LocalServerSocket openLocalSocket(String name) {
         try {
-            final Map<String, String> config = taskSettings("taskd.ca", "taskd.certificate", "taskd.key", "taskd.server");
+            final Map<String, String> config = taskSettings("taskd.ca", "taskd.certificate", "taskd.key", "taskd.server", "taskd.trust");
             logger.d("Will run with config:", config);
             if (!config.containsKey("taskd.server")) {
                 // Not configured
@@ -762,10 +776,10 @@ public class AccountController {
         if (null != tags) {
             intent.putExtra(App.KEY_EDIT_TAGS, MainListAdapter.join(" ", MainListAdapter.array2List(tags)));
         }
-        intent.putExtra(App.KEY_EDIT_DUE, MainListAdapter.asDate(json.optString("due"), "", MainListAdapter.formattedFormat));
-        intent.putExtra(App.KEY_EDIT_WAIT, MainListAdapter.asDate(json.optString("wait"), "", MainListAdapter.formattedFormat));
-        intent.putExtra(App.KEY_EDIT_SCHEDULED, MainListAdapter.asDate(json.optString("scheduled"), "", MainListAdapter.formattedFormat));
-        intent.putExtra(App.KEY_EDIT_UNTIL, MainListAdapter.asDate(json.optString("until"), "", MainListAdapter.formattedFormat));
+        intent.putExtra(App.KEY_EDIT_DUE, MainListAdapter.asDate(json.optString("due"), "", null));
+        intent.putExtra(App.KEY_EDIT_WAIT, MainListAdapter.asDate(json.optString("wait"), "", null));
+        intent.putExtra(App.KEY_EDIT_SCHEDULED, MainListAdapter.asDate(json.optString("scheduled"), "", null));
+        intent.putExtra(App.KEY_EDIT_UNTIL, MainListAdapter.asDate(json.optString("until"), "", null));
         intent.putExtra(App.KEY_EDIT_RECUR, json.optString("recur"));
         return true;
     }
