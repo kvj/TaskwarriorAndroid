@@ -40,7 +40,7 @@ public class MainList extends Fragment {
         View view = inflater.inflate(R.layout.fragment_list, container, false);
         list = (RecyclerView) view.findViewById(R.id.list_main_list);
         list.setLayoutManager(new LinearLayoutManager(getContext()));
-        adapter = new MainListAdapter();
+        adapter = new MainListAdapter(getResources());
         list.setAdapter(adapter);
         return view;
     }

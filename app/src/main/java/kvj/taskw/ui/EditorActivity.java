@@ -1,10 +1,8 @@
 package kvj.taskw.ui;
 
 import android.app.Activity;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
@@ -61,6 +59,7 @@ public class EditorActivity extends AppCompatActivity {
             controller.messageShort("Invalid arguments");
             return;
         }
+        toolbar.setSubtitle(ac.name());
         progressListener = MainActivity.setupProgressListener(this, progressBar);
         new Tasks.ActivitySimpleTask<List<String>>(this){
 
@@ -95,7 +94,10 @@ public class EditorActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.menu_tb_save:
-                doSave();
+                doSave(false);
+                break;
+            case R.id.menu_tb_add_another:
+                doSave(true);
                 break;
             case R.id.menu_tb_add_shortcut:
                 createShortcut();
@@ -159,7 +161,7 @@ public class EditorActivity extends AppCompatActivity {
 
     private String save() {
         if (!form.changed()) { // No change - no save
-            return null;
+            return "Nothing has been changed";
         }
         String description = form.getValue(App.KEY_EDIT_DESCRIPTION);
         if (TextUtils.isEmpty(description)) { // Empty desc
@@ -209,7 +211,7 @@ public class EditorActivity extends AppCompatActivity {
         }
     }
 
-    private void doSave() {
+    private void doSave(final boolean addAnother) {
         new Tasks.ActivitySimpleTask<String>(this) {
 
             @Override
@@ -222,8 +224,14 @@ public class EditorActivity extends AppCompatActivity {
                 if (!TextUtils.isEmpty(result)) { // Failed
                     controller.messageLong(result);
                 } else {
+                    controller.messageShort("Task added");
                     EditorActivity.this.setResult(Activity.RESULT_OK);
-                    EditorActivity.this.finish();
+                    if (addAnother) { // Keep everything except description
+                        form.setValue(App.KEY_EDIT_DESCRIPTION, "");
+                        form.getView(App.KEY_EDIT_DESCRIPTION).requestFocus();
+                    } else { // Finish activity
+                        EditorActivity.this.finish();
+                    }
                 }
             }
         }.exec();

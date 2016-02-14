@@ -1,6 +1,7 @@
 package kvj.taskw.ui;
 
 import android.content.Context;
+import android.content.res.Resources;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
@@ -31,6 +32,7 @@ import kvj.taskw.data.ReportInfo;
  */
 public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListViewHolder> {
 
+    private final int lastMargin;
     private int urgMin;
     private int urgMax;
     private Accessor<JSONObject, String> uuidAcc = new Accessor<JSONObject, String>() {
@@ -39,6 +41,10 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
             return object.optString("uuid");
         }
     };
+
+    public MainListAdapter(Resources resources) {
+        lastMargin = (int) resources.getDimension(R.dimen.last_task_margin);
+    }
 
     public interface ItemListener {
         public void onEdit(JSONObject json);
@@ -82,6 +88,8 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
 
     @Override
     public void onBindViewHolder(ListViewHolder holder, int position) {
+        boolean last = getItemCount() - 1 == position;
+        holder.itemView.setPadding(0, 0, 0, last? lastMargin: 0);
         final JSONObject json = data.get(position);
         holder.card.removeAllViews();
         RemoteViews card = fill(holder.itemView.getContext(), json, info, urgMin, urgMax);
