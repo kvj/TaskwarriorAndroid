@@ -13,7 +13,5 @@
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:textAppearance="@style/TextAppearance.AppCompat.Small"
-            android:text=""/>
+            style="@style/LabelText"/>
 </LinearLayout>

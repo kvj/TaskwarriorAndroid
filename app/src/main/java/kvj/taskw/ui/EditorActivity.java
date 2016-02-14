@@ -87,6 +87,9 @@ public class EditorActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_editor, menu);
+        if (null != editor && !editor.adding(form)) { // New item mode
+            menu.findItem(R.id.menu_tb_add_another).setVisible(false);
+        }
         return true;
     }
 

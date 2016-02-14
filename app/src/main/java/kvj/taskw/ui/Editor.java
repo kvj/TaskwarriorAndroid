@@ -140,9 +140,17 @@ public class Editor extends Fragment {
         prioritiesSpinner.setAdapter(adapter);
     }
 
-    public void show(FormController form) {
+    public boolean adding(FormController form) {
         String uuid = form.getValue(App.KEY_EDIT_UUID);
         if (TextUtils.isEmpty(uuid)) { // Add new
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public void show(FormController form) {
+        if (adding(form)) { // Add new
             form.getView(App.KEY_EDIT_STATUS).setVisibility(View.VISIBLE);
         } else {
             form.getView(App.KEY_EDIT_STATUS).setVisibility(View.GONE);

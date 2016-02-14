@@ -32,7 +32,7 @@
     <style name="LabelIcon">
         <item name="android:layout_width">16dp</item>
         <item name="android:layout_height">16dp</item>
-        <item name="android:layout_gravity">top</item>
+        <item name="android:layout_gravity">center_vertical</item>
         <item name="android:layout_margin">2dp</item>
     </style>
     <style name="VerticalBar">
@@ -45,6 +45,14 @@
         <item name="android:textAppearance">@style/TextAppearance.AppCompat.Small</item>
         <item name="android:typeface">monospace</item>
         <item name="android:gravity">top</item>
+    </style>
+    <style name="LabelText">
+        <item name="android:textAppearance">@style/TextAppearance.AppCompat.Small</item>
+        <item name="android:layout_gravity">center_vertical</item>
+        <item name="android:padding">2dp</item>
+        <item name="android:background">?android:attr/selectableItemBackground</item>
+        <item name="android:longClickable">true</item>
+        <item name="android:hapticFeedbackEnabled">true</item>
     </style>
 
 </resources>
