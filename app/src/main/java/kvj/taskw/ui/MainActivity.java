@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
+import android.support.v4.util.Pair;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -32,6 +33,7 @@ import org.kvj.bravo7.log.Logger;
 import org.kvj.bravo7.util.DataUtil;
 import org.kvj.bravo7.util.Tasks;
 
+import java.util.ArrayList;
 import java.util.Map;
 
 import kvj.taskw.App;
@@ -154,6 +156,35 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onCopyText(JSONObject json, String text) {
                 controller.copyToClipboard(text);
+            }
+
+            @Override
+            public void onLabelClick(JSONObject json, String type, boolean longClick) {
+                if ("project".equals(type)) {
+                    add(Pair.create(App.KEY_EDIT_PROJECT, json.optString("project")));
+                }
+                if ("tags".equals(type)) {
+                    String tags = MainListAdapter.join(" ",
+                            MainListAdapter.array2List(json.optJSONArray("tags")));
+                    add(Pair.create(App.KEY_EDIT_TAGS, tags));
+                }
+                if ("due".equals(type)) {
+                    add(Pair.create(App.KEY_EDIT_DUE,
+                            MainListAdapter.asDate(json.optString("due"), "", null)));
+                }
+                if ("wait".equals(type)) {
+                    add(Pair.create(App.KEY_EDIT_WAIT,
+                            MainListAdapter.asDate(json.optString("wait"), "", null)));
+                }
+                if ("scheduled".equals(type)) {
+                    add(Pair.create(App.KEY_EDIT_SCHEDULED,
+                            MainListAdapter.asDate(json.optString("scheduled"), "", null)));
+                }
+                if ("recur".equals(type)) {
+                    add(Pair.create(App.KEY_EDIT_UNTIL,
+                                    MainListAdapter.asDate(json.optString("until"), "", null)),
+                            Pair.create(App.KEY_EDIT_RECUR, json.optString("recur")));
+                }
             }
 
             @Override
@@ -391,10 +422,22 @@ public class MainActivity extends AppCompatActivity {
         };
     }
 
-    private void add() {
+    private void add(Pair<String, String> ...pairs) {
         if (null == ac) return;
         Intent intent = new Intent(this, EditorActivity.class);
         ac.intentForEditor(intent, null);
+        if (null != pairs) {
+            Bundle data = new Bundle();
+            ArrayList<String> names = new ArrayList<>();
+            for (Pair<String, String> pair : pairs) { // $COMMENT
+                if (!TextUtils.isEmpty(pair.second)) { // Has data
+                    data.putString(pair.first, pair.second);
+                    names.add(pair.first);
+                }
+            }
+            intent.putExtra(App.KEY_EDIT_DATA, data);
+            intent.putStringArrayListExtra(App.KEY_EDIT_DATA_FIELDS, names);
+        }
         startActivityForResult(intent, App.EDIT_REQUEST);
     }
 
@@ -587,10 +630,11 @@ public class MainActivity extends AppCompatActivity {
             }
         }.exec();
     }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        list.reload(); // Reload after edit
-    }
+//
+//    @Override
+//    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+//        super.onActivityResult(requestCode, resultCode, data);
+//        logger.d("Reload after finish:", requestCode, resultCode);
+//        list.reload(); // Reload after edit
+//    }
 }

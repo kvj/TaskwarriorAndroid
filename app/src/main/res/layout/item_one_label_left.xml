@@ -1,17 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:orientation="horizontal"
-              android:layout_width="match_parent"
-              android:layout_height="wrap_content">
+    style="@style/LabelItem"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal">
+
     <android.widget.ImageView
         android:id="@+id/label_icon"
-            style="@style/LabelIcon"
-            android:layout_weight="0"
-            android:src="@drawable/ic_label_scheduled"/>
+        style="@style/LabelIcon"
+        android:layout_weight="0"
+        android:src="@drawable/ic_label_scheduled" />
+
     <TextView
         android:id="@+id/label_text"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            style="@style/LabelText"/>
+        style="@style/LabelText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1" />
 </LinearLayout>

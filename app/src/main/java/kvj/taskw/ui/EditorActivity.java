@@ -10,6 +10,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ProgressBar;
 
+import org.kvj.bravo7.form.BundleAdapter;
 import org.kvj.bravo7.form.FormController;
 import org.kvj.bravo7.form.impl.ViewFinder;
 import org.kvj.bravo7.form.impl.bundle.StringBundleAdapter;
@@ -51,6 +52,28 @@ public class EditorActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         form.add(new TransientAdapter<>(new StringBundleAdapter(), null), App.KEY_ACCOUNT);
         form.add(new TransientAdapter<>(new StringBundleAdapter(), null), App.KEY_EDIT_UUID);
+        form.add(new TransientAdapter<>(new BundleAdapter<Bundle>() {
+            @Override
+            public Bundle get(Bundle bundle, String name, Bundle def) {
+                return bundle.getBundle(name);
+            }
+
+            @Override
+            public void set(Bundle bundle, String name, Bundle value) {
+                bundle.putBundle(name, value);
+            }
+        }, null).oneShot(), App.KEY_EDIT_DATA);
+        form.add(new TransientAdapter<>(new BundleAdapter<ArrayList<String>>() {
+            @Override
+            public ArrayList<String> get(Bundle bundle, String name, ArrayList<String> def) {
+                return bundle.getStringArrayList(name);
+            }
+
+            @Override
+            public void set(Bundle bundle, String name, ArrayList<String> value) {
+                bundle.putStringArrayList(name, value);
+            }
+        }, null).oneShot(), App.KEY_EDIT_DATA_FIELDS);
         editor.initForm(form);
         form.load(this, savedInstanceState);
         ac = controller.accountController(form);
@@ -74,6 +97,14 @@ public class EditorActivity extends AppCompatActivity {
                 priorities = result;
                 form.load(EditorActivity.this, savedInstanceState, App.KEY_EDIT_PRIORITY);
                 editor.show(form);
+                Bundle formData = form.getValue(App.KEY_EDIT_DATA);
+                List<String> fields = form.getValue(App.KEY_EDIT_DATA_FIELDS);
+                logger.d("Edit:", formData, fields);
+                if (null != formData && null != fields) { // Have data
+                    for (String f : fields) { // $COMMENT
+                        form.setValue(f, formData.getString(f));
+                    }
+                }
             }
         }.exec();
     }

@@ -35,6 +35,8 @@ public class App extends org.kvj.bravo7.ng.App<Controller> {
     public static final String KEY_QUERY_INPUT = "query_input";
     public static final String KEY_RUN_COMMAND = "run_command";
     public static final String KEY_RUN_OUTPUT = "run_output";
+    public static final String KEY_EDIT_DATA = "editor_data";
+    public static final String KEY_EDIT_DATA_FIELDS = "editor_data_fields";
 
     @Override
     protected Controller create() {

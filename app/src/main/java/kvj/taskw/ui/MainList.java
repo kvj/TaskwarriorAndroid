@@ -53,7 +53,7 @@ public class MainList extends Fragment {
 
             @Override
             protected ReportInfo doInBackground() {
-                logger.d("Load:", query, report);
+//                logger.d("Load:", query, report);
                 if (!TextUtils.isEmpty(query)) {
                     return controller.accountController(account).createQueryInfo(query);
                 }
@@ -84,7 +84,7 @@ public class MainList extends Fragment {
             @Override
             public void finish(List<JSONObject> result) {
                 adapter.update(result, info);
-                logger.d("Loaded:", info, result);
+//                logger.d("Loaded:", info, result);
             }
         }.exec();
 

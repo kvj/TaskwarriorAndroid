@@ -54,6 +54,7 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
         public void onStartStop(JSONObject json);
         public void onDenotate(JSONObject json, JSONObject annJson);
         public void onCopyText(JSONObject json, String text);
+        public void onLabelClick(JSONObject json, String type, boolean longClick);
     }
 
     List<JSONObject> data = new ArrayList<>();
@@ -92,8 +93,12 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
         holder.itemView.setPadding(0, 0, 0, last? lastMargin: 0);
         final JSONObject json = data.get(position);
         holder.card.removeAllViews();
-        RemoteViews card = fill(holder.itemView.getContext(), json, info, urgMin, urgMax);
-        holder.card.addView(card.apply(holder.itemView.getContext(), holder.card));
+        TaskView card = fill(holder.itemView.getContext(), json, info, urgMin, urgMax);
+        holder.card.addView(card.removeView.apply(holder.itemView.getContext(), holder.card));
+        setupLabelListeners(holder.itemView.getContext(), json,
+                (ViewGroup) holder.card.findViewById(R.id.task_labels_left), card.leftColumn);
+        setupLabelListeners(holder.itemView.getContext(), json,
+                (ViewGroup) holder.card.findViewById(R.id.task_labels_right), card.rightColumn);
         final View bottomBtns = holder.card.findViewById(R.id.task_bottom_btns);
         final ViewGroup annotations = (ViewGroup) holder.card.findViewById(R.id.task_annotations);
         final View id = holder.card.findViewById(R.id.task_id);
@@ -162,6 +167,23 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
                     deleteBtn.setOnClickListener(denotate(json, jsonAnn));
                 }
             }
+        }
+    }
+
+    private void setupLabelListeners(final Context context, final JSONObject json, ViewGroup groupView, List<String> column) {
+        for (int i = 0; i < column.size(); i++) { // Attach to every item
+            if (i >= groupView.getChildCount()) { // Out of bounds
+                continue;
+            }
+            final String data = column.get(i);
+            groupView.getChildAt(i).setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (null != listener) { //
+                        listener.onLabelClick(json, data, false);
+                    }
+                }
+            });
         }
     }
 
@@ -253,11 +275,19 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
         }
     }
 
-    public static RemoteViews fill(Context context, JSONObject json, ReportInfo info, int urgMin, int urgMax) {
+    public static class TaskView {
+        public RemoteViews removeView = null;
+        public List<String> leftColumn = new ArrayList<>();
+        public List<String> rightColumn = new ArrayList<>();
+    }
+
+    public static TaskView fill(Context context, JSONObject json, ReportInfo info, int urgMin, int urgMax) {
 //        logger.d("Fill", json, info.fields);
         String status = json.optString("status", "pending");
         boolean pending = "pending".equalsIgnoreCase(status);
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.item_one_task);
+        TaskView result = new TaskView();
+        result.removeView = views;
         views.setViewVisibility(R.id.task_urgency, info.fields.containsKey("urgency")? View.VISIBLE: View.GONE);
         views.setViewVisibility(R.id.task_priority, info.fields.containsKey("priority") ? View.VISIBLE : View.GONE);
         views.setImageViewResource(R.id.task_status_btn, status2icon(status));
@@ -299,14 +329,16 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
                 views.setProgressBar(R.id.task_urgency, urgMax-urgMin, (int)Math.round(json.optDouble("urgency"))-urgMin, false);
             }
             if (field.getKey().equalsIgnoreCase("due")) {
-                addLabel(context, views, true, R.drawable.ic_label_due,
+                addLabel(context, result, "due", true, R.drawable.ic_label_due,
                          asDate(json.optString("due"), field.getValue(), null));
             }
             if (field.getKey().equalsIgnoreCase("wait")) {
-                addLabel(context, views, true, R.drawable.ic_label_wait, asDate(json.optString("wait"), field.getValue(), null));
+                addLabel(context, result, "wait", true, R.drawable.ic_label_wait,
+                        asDate(json.optString("wait"), field.getValue(), null));
             }
             if (field.getKey().equalsIgnoreCase("scheduled")) {
-                addLabel(context, views, true, R.drawable.ic_label_scheduled, asDate(json.optString("scheduled"), field.getValue(), null));
+                addLabel(context, result, "scheduled", true, R.drawable.ic_label_scheduled,
+                        asDate(json.optString("scheduled"), field.getValue(), null));
             }
             if (field.getKey().equalsIgnoreCase("recur")) {
                 String recur = json.optString("recur");
@@ -316,13 +348,14 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
                         recur += String.format(" ~ %s", until);
                     }
                 }
-                addLabel(context, views, true, R.drawable.ic_label_recur, recur);
+                addLabel(context, result, "recur", true, R.drawable.ic_label_recur, recur);
             }
             if (field.getKey().equalsIgnoreCase("project")) {
-                addLabel(context, views, false, R.drawable.ic_label_project, json.optString("project"));
+                addLabel(context, result, "project", false, R.drawable.ic_label_project,
+                        json.optString("project"));
             }
             if (field.getKey().equalsIgnoreCase("tags")) {
-                addLabel(context, views, false, R.drawable.ic_label_tags, join(", ", array2List(
+                addLabel(context, result, "tags", false, R.drawable.ic_label_tags, join(", ", array2List(
                     json.optJSONArray("tags"))));
             }
             if (field.getKey().equalsIgnoreCase("start")) {
@@ -334,7 +367,7 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
                 }
             }
         }
-        return views;
+        return result;
     }
 
     public static String join(String with, Iterable<String> list) {
@@ -400,14 +433,17 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
         return R.drawable.ic_status_pending;
     }
 
-    private static void addLabel(Context context, RemoteViews views, boolean left, int icon, String text) {
+    private static void addLabel(Context context, TaskView view, String code, boolean left, int icon, String text) {
         if (TextUtils.isEmpty(text)) { // No label
             return;
         }
-        RemoteViews line = new RemoteViews(context.getPackageName(), left? R.layout.item_one_label_left: R.layout.item_one_label_right);
+        RemoteViews line = new RemoteViews(context.getPackageName(), left?
+                R.layout.item_one_label_left:
+                R.layout.item_one_label_right);
         line.setTextViewText(R.id.label_text, text);
         line.setImageViewResource(R.id.label_icon, icon);
-        views.addView(left? R.id.task_labels_left: R.id.task_labels_right, line);
+        view.removeView.addView(left ? R.id.task_labels_left : R.id.task_labels_right, line);
+        (left? view.leftColumn: view.rightColumn).add(code);
     }
 
     public void listener(ItemListener listener) {
