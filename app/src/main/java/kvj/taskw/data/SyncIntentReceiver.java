@@ -32,7 +32,7 @@ public class SyncIntentReceiver extends BroadcastReceiver {
                 if (null != account) {
                     return controller.accountController(account).taskSync();
                 }
-                return null;
+                return "Invalid profile";
             }
 
             @Override
