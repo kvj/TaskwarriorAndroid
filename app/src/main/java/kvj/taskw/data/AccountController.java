@@ -567,7 +567,7 @@ public class AccountController {
             }
             Collections.addAll(args, arguments);
             ProcessBuilder pb = new ProcessBuilder(args);
-            pb.directory(controller.context().getFilesDir());
+            pb.directory(tasksFolder);
             pb.environment().put("TASKRC", new File(tasksFolder, TASKRC).getAbsolutePath());
             pb.environment().put("TASKDATA", new File(tasksFolder, DATA_FOLDER).getAbsolutePath());
             Process p = pb.start();
