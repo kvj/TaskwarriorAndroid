@@ -607,89 +607,106 @@ public class AccountController {
         return new File(this.tasksFolder, path);
     }
 
-    private class LocalSocketThread extends Thread {
+    private class LocalSocketRunner {
 
-        private final Map<String, String> config;
-        private final LocalSocket socket;
+        private final int port;
+        private final String host;
+        private final SSLSocketFactory factory;
+        private final LocalServerSocket socket;
 
-        private LocalSocketThread(Map<String, String> config, LocalSocket socket) {
-            this.config = config;
-            this.socket = socket;
-        }
-
-        private void recvSend(InputStream from, OutputStream to) throws IOException {
-            byte[] head = new byte[4]; // Read it first
-            from.read(head);
-            to.write(head);
-            to.flush();
-            long size = ByteBuffer.wrap(head, 0, 4).order(ByteOrder.BIG_ENDIAN).getInt();
-            long bytes = 4;
-            byte[] buffer = new byte[1024];
-            logger.d("Will transfer:", size);
-            while (bytes < size) {
-                int recv = from.read(buffer);
-//                logger.d("Actually get:", recv);
-                if (recv == -1) {
-                    return;
-                }
-                to.write(buffer, 0, recv);
-                to.flush();
-                bytes += recv;
-            }
-            logger.d("Transfer done", bytes, size);
-        }
-
-        @Override
-        public void run() {
-            SSLSocket remoteSocket = null;
-            try {
-                SSLHelper.TrustType trustType = SSLHelper.parseTrustType(config.get("taskd.trust"));
-                String host = config.get("taskd.server");
-                int lastColon = host.lastIndexOf(":");
-                int port = Integer.parseInt(host.substring(lastColon + 1));
-                host = host.substring(0, lastColon);
-                SSLSocketFactory factory = SSLHelper.tlsSocket(
+        private LocalSocketRunner(String name, Map<String, String> config) throws Exception {
+            SSLHelper.TrustType trustType = SSLHelper.parseTrustType(config.get("taskd.trust"));
+            String _host = config.get("taskd.server");
+            int lastColon = _host.lastIndexOf(":");
+            this.port = Integer.parseInt(_host.substring(lastColon + 1));
+            this.host = _host.substring(0, lastColon);
+            this.factory = SSLHelper.tlsSocket(
                     new FileInputStream(fileFromConfig(config.get("taskd.ca"))),
                     new FileInputStream(fileFromConfig(config.get("taskd.certificate"))),
                     new FileInputStream(fileFromConfig(config.get("taskd.key"))), trustType);
-                logger.d("Connecting to:", host, port);
-                remoteSocket = (SSLSocket) factory.createSocket(host, port);
-                final SSLSocket finalRemoteSocket = remoteSocket;
-                Compat.levelAware(16, new Runnable() {
-                    @Override
-                    public void run() {
-                        finalRemoteSocket.setEnabledProtocols(new String[]{"TLSv1", "TLSv1.1", "TLSv1.2"});
+            logger.d("Connecting to:", this.host, this.port);
+            this.socket = new LocalServerSocket(name);
+        }
+
+        public void accept() throws IOException {
+            LocalSocket conn = socket.accept();
+            logger.d("New incoming connection");
+            new LocalSocketThread(conn).start();
+        }
+
+        private class LocalSocketThread extends Thread {
+
+            private final LocalSocket socket;
+
+            private LocalSocketThread(LocalSocket socket) {
+                this.socket = socket;
+            }
+
+            private void recvSend(InputStream from, OutputStream to) throws IOException {
+                byte[] head = new byte[4]; // Read it first
+                from.read(head);
+                to.write(head);
+                to.flush();
+                long size = ByteBuffer.wrap(head, 0, 4).order(ByteOrder.BIG_ENDIAN).getInt();
+                long bytes = 4;
+                byte[] buffer = new byte[1024];
+                logger.d("Will transfer:", size);
+                while (bytes < size) {
+                    int recv = from.read(buffer);
+//                logger.d("Actually get:", recv);
+                    if (recv == -1) {
+                        return;
                     }
-                }, new Runnable() {
-                    @Override
-                    public void run() {
-                        finalRemoteSocket.setEnabledProtocols(new String[]{"TLSv1"});
+                    to.write(buffer, 0, recv);
+                    to.flush();
+                    bytes += recv;
+                }
+                logger.d("Transfer done", bytes, size);
+            }
+
+            @Override
+            public void run() {
+                SSLSocket remoteSocket = null;
+                try {
+                    remoteSocket = (SSLSocket) factory.createSocket(host, port);
+                    final SSLSocket finalRemoteSocket = remoteSocket;
+                    Compat.levelAware(16, new Runnable() {
+                        @Override
+                        public void run() {
+                            finalRemoteSocket.setEnabledProtocols(new String[]{"TLSv1", "TLSv1.1", "TLSv1.2"});
+                        }
+                    }, new Runnable() {
+                        @Override
+                        public void run() {
+                            finalRemoteSocket.setEnabledProtocols(new String[]{"TLSv1"});
+                        }
+                    });
+                    InputStream localInput = socket.getInputStream();
+                    OutputStream localOutput = socket.getOutputStream();
+                    InputStream remoteInput = remoteSocket.getInputStream();
+                    OutputStream remoteOutput = remoteSocket.getOutputStream();
+                    logger.d("Connected, will read first piece", remoteSocket.getSession().getCipherSuite());
+                    recvSend(localInput, remoteOutput);
+                    recvSend(remoteInput, localOutput);
+                    logger.d("Sync success");
+                } catch (Exception e) {
+                    logger.e(e, "Failed to transfer data");
+                } finally {
+                    if (null != remoteSocket) {
+                        try {
+                            remoteSocket.close();
+                        } catch (IOException e) {
+                        }
                     }
-                });
-                InputStream localInput = socket.getInputStream();
-                OutputStream localOutput = socket.getOutputStream();
-                InputStream remoteInput = remoteSocket.getInputStream();
-                OutputStream remoteOutput = remoteSocket.getOutputStream();
-                logger.d("Connected, will read first piece", remoteSocket.getSession().getCipherSuite());
-                recvSend(localInput, remoteOutput);
-                recvSend(remoteInput, localOutput);
-                logger.d("Sync success");
-            } catch (Exception e) {
-                logger.e(e, "Failed to transfer data");
-            } finally {
-                if (null != remoteSocket) {
                     try {
-                        remoteSocket.close();
+                        socket.close();
                     } catch (IOException e) {
                     }
-                }
-                try {
-                    socket.close();
-                } catch (IOException e) {
                 }
             }
         }
     }
+
 
     private LocalServerSocket openLocalSocket(String name) {
         try {
@@ -698,17 +715,22 @@ public class AccountController {
             if (!config.containsKey("taskd.server")) {
                 // Not configured
                 logger.d("Sync not configured - give up");
+                controller.toastMessage("Sync disabled: no taskd.server value", true);
                 return null;
             }
-            final LocalServerSocket socket = new LocalServerSocket(name);
+            final LocalSocketRunner runner;
+            try {
+                runner = new LocalSocketRunner(name, config);
+            } catch (Exception e) {
+                controller.toastMessage("Sync disabled: certificate load failure", true);
+                return null;
+            }
             acceptThread = new Thread() {
                 @Override
                 public void run() {
                     while (true) {
                         try {
-                            LocalSocket conn = socket.accept();
-                            logger.d("New incoming connection");
-                            new LocalSocketThread(config, conn).start();
+                            runner.accept();
                         } catch (IOException e) {
                             logger.w(e, "Accept failed");
                             return;
@@ -717,8 +739,9 @@ public class AccountController {
                 }
             };
             acceptThread.start();
-            return socket; // Close me later on stop
-        } catch (IOException e) {
+            controller.toastMessage("Sync configured", false);
+            return runner.socket; // Close me later on stop
+        } catch (Exception e) {
             logger.e(e, "Failed to open local socket");
         }
         return null;

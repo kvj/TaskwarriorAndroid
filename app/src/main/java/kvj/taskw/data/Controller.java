@@ -17,6 +17,7 @@ import android.support.v4.app.NotificationManagerCompat;
 import android.text.TextUtils;
 
 import org.kvj.bravo7.form.FormController;
+import org.kvj.bravo7.util.Listeners;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -44,6 +45,11 @@ import kvj.taskw.R;
  */
 public class Controller extends org.kvj.bravo7.ng.Controller {
 
+    public static interface ToastMessageListener {
+
+        public void onMessage(String message, boolean showLong);
+    }
+
     protected final String executable;
     private final AccountManager accountManager;
 
@@ -51,6 +57,8 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
     private final NotificationManagerCompat notificationManager;
 
     final Collection<String> BUILTIN_REPORTS = new ArrayList<>();
+
+    private final Listeners<ToastMessageListener> toastListeners = new Listeners<>();
 
     public Controller(Context context, String name) {
         super(context, name);
@@ -351,4 +359,17 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
         return n;
     }
 
+    public Listeners<ToastMessageListener> toastListeners() {
+        return toastListeners;
+    }
+
+    public void toastMessage(final String message, final boolean showLong) {
+        toastListeners.emit(new Listeners.ListenerEmitter<ToastMessageListener>() {
+            @Override
+            public boolean emit(ToastMessageListener listener) {
+                listener.onMessage(message, showLong);
+                return false; // One shot
+            }
+        });
+    }
 }

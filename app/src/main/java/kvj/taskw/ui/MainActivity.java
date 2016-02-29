@@ -41,7 +41,7 @@ import kvj.taskw.R;
 import kvj.taskw.data.AccountController;
 import kvj.taskw.data.Controller;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements Controller.ToastMessageListener {
 
     Logger logger = Logger.forInstance(this);
 
@@ -87,6 +87,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        controller.toastListeners().add(this);
         setContentView(R.layout.activity_list);
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         navigationDrawer = (DrawerLayout) findViewById(R.id.list_navigation_drawer);
@@ -278,7 +279,7 @@ public class MainActivity extends AppCompatActivity {
                 Uri uri = Uri.parse(String.format("file://%s", ac.taskrc().getAbsolutePath()));
                 intent.setDataAndType(uri, "text/plain");
                 try {
-                    startActivity(intent);
+                    startActivityForResult(intent, App.SETTINGS_REQUEST);
                 } catch (Exception e) {
                     logger.e(e, "Failed to edit file");
                     controller.messageLong("No suitable plain text editors found");
@@ -301,7 +302,6 @@ public class MainActivity extends AppCompatActivity {
                 if (null != ac) {
                     // Refreshed
                     refreshReports();
-                    controller.messageShort("Refreshed");
                 } else {
                     MainActivity.this.finish(); // Close
                 }
@@ -481,6 +481,7 @@ public class MainActivity extends AppCompatActivity {
         if (null != ac) {
             ac.listeners().remove(progressListener);
         }
+        controller.toastListeners().remove(this);
         super.onDestroy();
     }
 
@@ -630,11 +631,28 @@ public class MainActivity extends AppCompatActivity {
             }
         }.exec();
     }
-//
-//    @Override
-//    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-//        super.onActivityResult(requestCode, resultCode, data);
-//        logger.d("Reload after finish:", requestCode, resultCode);
-//        list.reload(); // Reload after edit
-//    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (null == ac) return;
+        if (RESULT_OK == resultCode && App.SETTINGS_REQUEST == requestCode) { // Settings were modified
+            logger.d("Reload after finish:", requestCode, resultCode);
+            refreshAccount(form.getValue(App.KEY_ACCOUNT, String.class));
+        }
+    }
+
+    @Override
+    public void onMessage(final String message, final boolean showLong) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (showLong) {
+                    controller.messageLong(message);
+                } else {
+                    controller.messageShort(message);
+                }
+            }
+        });
+    }
 }
