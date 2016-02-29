@@ -107,7 +107,7 @@ public class TextEditor extends AppCompatActivity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu_editor, menu);
+        getMenuInflater().inflate(R.menu.menu_text_editor, menu);
         return true;
     }
 
