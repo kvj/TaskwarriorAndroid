@@ -184,6 +184,15 @@ public class MainListAdapter extends RecyclerView.Adapter<MainListAdapter.ListVi
                     }
                 }
             });
+            groupView.getChildAt(i).setOnLongClickListener(new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View v) {
+                    if (null != listener) { //
+                        listener.onLabelClick(json, data, true);
+                    }
+                    return true;
+                }
+            });
         }
     }
 

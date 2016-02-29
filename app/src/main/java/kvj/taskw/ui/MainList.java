@@ -5,7 +5,6 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -53,11 +52,8 @@ public class MainList extends Fragment {
 
             @Override
             protected ReportInfo doInBackground() {
-//                logger.d("Load:", query, report);
-                if (!TextUtils.isEmpty(query)) {
-                    return controller.accountController(account).createQueryInfo(query);
-                }
-                return controller.accountController(account).taskReportInfo(report);
+                logger.d("Load:", query, report);
+                return controller.accountController(account).taskReportInfo(report, query);
             }
 
             @Override
@@ -76,6 +72,7 @@ public class MainList extends Fragment {
 
             @Override
             protected List<JSONObject> doInBackground() {
+                logger.d("Exec:", info.query);
                 List<JSONObject> list = controller.accountController(account).taskList(info.query);
                 info.sort(list); // Sorted according to report spec.
                 return list;

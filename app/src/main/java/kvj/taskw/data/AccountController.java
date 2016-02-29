@@ -401,7 +401,7 @@ public class AccountController {
         }
     }
 
-    public ReportInfo taskReportInfo(String name) {
+    public ReportInfo taskReportInfo(String name, final String query) {
         final ReportInfo info = new ReportInfo();
         callTask(new PatternLineConsumer() {
 
@@ -427,7 +427,11 @@ public class AccountController {
                     }
                 }
                 if (key.endsWith(".filter")) {
-                    info.query = value;
+                    String q = value;
+                    if (!TextUtils.isEmpty(query)) { // Add query
+                        q += " "+query;
+                    }
+                    info.query = q;
                 }
                 if (key.endsWith(".description")) {
                     info.description = value;

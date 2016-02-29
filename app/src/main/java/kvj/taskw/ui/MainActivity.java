@@ -139,7 +139,7 @@ public class MainActivity extends AppCompatActivity implements Controller.ToastM
             @Override
             public void onDelete(JSONObject json) {
                 doOp(String.format("Task '%s' deleted", json.optString("description")),
-                     json.optString("uuid"), "delete");
+                        json.optString("uuid"), "delete");
             }
 
             @Override
@@ -151,7 +151,7 @@ public class MainActivity extends AppCompatActivity implements Controller.ToastM
             public void onDenotate(JSONObject json, JSONObject annJson) {
                 String text = annJson.optString("description");
                 doOp(String.format("Annotation '%s' deleted", text), json.optString("uuid"),
-                     "denotate", text);
+                        "denotate", text);
             }
 
             @Override
@@ -161,6 +161,28 @@ public class MainActivity extends AppCompatActivity implements Controller.ToastM
 
             @Override
             public void onLabelClick(JSONObject json, String type, boolean longClick) {
+                if (longClick) { // Special case - start search
+                    Intent intent = new Intent(MainActivity.this, MainActivity.class);
+                    intent.putExtra(App.KEY_ACCOUNT, form.getValue(App.KEY_ACCOUNT, String.class));
+                    intent.putExtra(App.KEY_REPORT, form.getValue(App.KEY_REPORT, String.class));
+                    String query = form.getValue(App.KEY_QUERY);
+                    if ("project".equals(type)) {
+                        query += " pro:" + json.optString("project");
+                        intent.putExtra(App.KEY_QUERY, query.trim());
+                        startActivity(intent);
+                        return;
+                    }
+                    if ("tags".equals(type)) {
+                        String tags = MainListAdapter.join(" +",
+                                MainListAdapter.array2List(json.optJSONArray("tags")));
+                        query += " +" + tags;
+                        intent.putExtra(App.KEY_QUERY, query.trim());
+                        startActivity(intent);
+                        return;
+                    }
+
+                    return;
+                }
                 if ("project".equals(type)) {
                     add(Pair.create(App.KEY_EDIT_PROJECT, json.optString("project")));
                 }
@@ -209,18 +231,22 @@ public class MainActivity extends AppCompatActivity implements Controller.ToastM
         progressListener = MainActivity.setupProgressListener(this, progressBar);
         form.add(new TransientAdapter<>(new StringBundleAdapter(), null), App.KEY_ACCOUNT);
         form.add(new TransientAdapter<>(new StringBundleAdapter(), null), App.KEY_REPORT);
-        form.add(new TransientAdapter<>(new StringBundleAdapter(), null), App.KEY_QUERY);
-        form.add(new TextViewCharSequenceAdapter(R.id.list_filter, null), App.KEY_QUERY_INPUT);
+//        form.add(new TransientAdapter<>(new StringBundleAdapter(), null), App.KEY_QUERY);
+        form.add(new TextViewCharSequenceAdapter(R.id.list_filter, null), App.KEY_QUERY);
         form.load(this, savedInstanceState);
         findViewById(R.id.list_filter_btn).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String input = form.getValue(App.KEY_QUERY_INPUT);
-                form.setValue(App.KEY_QUERY, input);
+                String input = form.getValue(App.KEY_QUERY);
+//                form.setValue(App.KEY_QUERY, input);
                 logger.d("Changed filter:", form.getValue(App.KEY_QUERY), input);
                 reload();
             }
         });
+        if (!TextUtils.isEmpty(form.getValue(App.KEY_QUERY, String.class))) {
+            // Have something in query
+            filterPanel.setVisibility(View.VISIBLE);
+        }
     }
 
     private void reload() {
@@ -519,14 +545,12 @@ public class MainActivity extends AppCompatActivity implements Controller.ToastM
                 for (Map.Entry<String, String> entry : result.entrySet()) { // Add reports
                     addReportMenuItem(entry.getKey(), entry.getValue(), reportsMenu.getSubMenu());
                 }
-                if (null == form.getValue(App.KEY_QUERY)) {
-                    // Report mode
-                    String report = form.getValue(App.KEY_REPORT);
-                    if (null == report || !result.containsKey(report)) {
-                        report = result.keySet().iterator().next(); // First item
-                    }
-                    form.setValue(App.KEY_REPORT, report);
+                // Report mode
+                String report = form.getValue(App.KEY_REPORT);
+                if (null == report || !result.containsKey(report)) {
+                    report = result.keySet().iterator().next(); // First item
                 }
+                form.setValue(App.KEY_REPORT, report);
                 list.load(form, updateTitleAction);
             }
 
@@ -572,7 +596,11 @@ public class MainActivity extends AppCompatActivity implements Controller.ToastM
     private void createShortcut() {
         Bundle bundle = new Bundle();
         form.save(bundle, App.KEY_ACCOUNT, App.KEY_REPORT, App.KEY_QUERY);
-        String name = bundle.getString(App.KEY_QUERY, bundle.getString(App.KEY_REPORT));
+        String query = bundle.getString(App.KEY_QUERY, "");
+        String name = bundle.getString(App.KEY_REPORT, "");
+        if (!TextUtils.isEmpty(query)) { // Have add. query
+            name += " "+query;
+        }
         final Intent shortcutIntent = new Intent(this, MainActivity.class);
         shortcutIntent.putExtras(bundle);
         shortcutIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -588,7 +616,7 @@ public class MainActivity extends AppCompatActivity implements Controller.ToastM
 
     private void showFilter() {
         filterPanel.setVisibility(View.VISIBLE);
-        form.getView(App.KEY_QUERY_INPUT).requestFocus();
+        form.getView(App.KEY_QUERY).requestFocus();
     }
 
     private void undo() {
