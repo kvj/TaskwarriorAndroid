@@ -354,15 +354,21 @@ public class AccountController {
 
             @Override
             void eat(String key, String value) {
+                if (controller.BUILTIN_REPORTS.contains(key)) { // Skip builtin reports
+                    return;
+                }
                 if (!onlyThose.isEmpty() && !onlyThose.contains(key)) {
-                    return; // Skip
+                    return; // Skip not selected
                 }
                 keys.add(key);
                 values.add(value);
             }
         }, errConsumer, "reports");
+        if (onlyThose.isEmpty() && !keys.isEmpty()) { // All reports - remove last
+            keys.remove(keys.size()-1);
+            values.remove(values.size()-1);
+        }
         LinkedHashMap<String, String> result = new LinkedHashMap<>();
-//        logger.d("Reports:", keys, values, defaultReport, list, onlyThose, settings);
         if (keys.contains(defaultReport)) {
             // Move default to the top
             int index = keys.indexOf(defaultReport);
@@ -373,6 +379,9 @@ public class AccountController {
         }
         for (int i = 0; i < keys.size(); i++) {
             result.put(keys.get(i), values.get(i));
+        }
+        if (result.isEmpty()) { // Invalid configuration
+            result.put("next", "[next] Fail-safe report");
         }
 //        logger.d("Reports after sort:", keys, values, defaultReport, result);
         return result;
@@ -424,7 +433,7 @@ public class AccountController {
                     info.description = value;
                 }
             }
-        }, errConsumer, "show", String.format("report.%s", name));
+        }, errConsumer, "show", String.format("report.%s.", name));
         info.priorities = taskPriority();
         if (!info.sort.containsKey("description")) {
             info.sort.put("description", true);

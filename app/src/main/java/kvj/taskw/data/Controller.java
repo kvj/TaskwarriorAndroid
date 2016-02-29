@@ -50,8 +50,11 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
     private final Map<String, AccountController> controllerMap = new HashMap<>();
     private final NotificationManagerCompat notificationManager;
 
+    final Collection<String> BUILTIN_REPORTS = new ArrayList<>();
+
     public Controller(Context context, String name) {
         super(context, name);
+        Collections.addAll(BUILTIN_REPORTS, App.BUILTIN_REPORTS);
         accountManager = AccountManager.get(context);
         executable = eabiExecutable();
         notificationManager = NotificationManagerCompat.from(context);
