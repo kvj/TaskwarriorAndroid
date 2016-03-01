@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.PowerManager;
+import android.text.TextUtils;
 
 import org.kvj.bravo7.log.Logger;
 import org.kvj.bravo7.util.Tasks;
@@ -19,7 +20,7 @@ public class SyncIntentReceiver extends BroadcastReceiver {
     Logger logger = Logger.forInstance(this);
 
     @Override
-    public void onReceive(Context context, final Intent intent) {
+    public void onReceive(final Context context, final Intent intent) {
         // Lock and run sync
         final PowerManager.WakeLock lock = controller.lock();
         lock.acquire();
@@ -29,10 +30,10 @@ public class SyncIntentReceiver extends BroadcastReceiver {
             @Override
             protected String doInBackground() {
                 String account = intent.getStringExtra(App.KEY_ACCOUNT);
-                if (null != account) {
-                    return controller.accountController(account).taskSync();
+                if (TextUtils.isEmpty(account)) {
+                    account = controller.currentAccount();
                 }
-                return "Invalid profile";
+                return controller.accountController(account).taskSync();
             }
 
             @Override

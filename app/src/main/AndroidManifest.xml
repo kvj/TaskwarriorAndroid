@@ -76,6 +76,9 @@
                 android:name=".data.SyncIntentReceiver"
                 android:enabled="true"
                 android:exported="true">
+            <intent-filter>
+                <action android:name="taskw.SYNC"/>
+            </intent-filter>
         </receiver>
         <receiver android:name=".data.BootReceiver" >
             <intent-filter>
