@@ -54,82 +54,81 @@
                             android:layout_marginLeft="3dp"
                             android:layout_gravity="center_vertical"
                             android:layout_weight="0"/>
+                    <android.widget.ImageView
+                        android:id="@+id/task_annotations_flag"
+                        style="@style/IconImage"
+                        android:layout_gravity="top"
+                        android:src="@drawable/ic_status_annotations"/>
                 </LinearLayout>
                 <LinearLayout android:layout_width="match_parent"
                               android:layout_height="wrap_content"
                               android:orientation="vertical">
                     <LinearLayout
-                            android:layout_marginLeft="8dp"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="horizontal"
                             android:baselineAligned="false">
-                        <LinearLayout android:layout_width="0dp"
-                                      android:layout_weight="0.5"
-                                      android:orientation="vertical"
-                                      android:id="@+id/task_labels_left"
-                                      android:layout_height="wrap_content">
-                            <!--<include layout="@layout/item_one_label_left"/>-->
-                        </LinearLayout>
-                        <LinearLayout android:layout_width="0dp"
-                                      android:layout_weight="0.5"
-                                      android:orientation="vertical"
-                                      android:id="@+id/task_labels_right"
-                                      android:layout_height="wrap_content">
-                            <!--<include layout="@layout/item_one_label_right"/>-->
-                        </LinearLayout>
-                    </LinearLayout>
-                    <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal">
                         <LinearLayout
-                                android:layout_weight="1"
-                                android:orientation="horizontal"
-                                android:layout_width="0dp"
-                                android:layout_height="match_parent">
+                            android:layout_weight="0"
+                            android:layout_gravity="bottom"
+                            android:orientation="vertical"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content">
                             <android.widget.ImageButton
                                 android:id="@+id/task_start_stop_btn"
                                 style="@style/IconButton"
-                                android:layout_gravity="center_vertical"
                                 android:src="@drawable/ic_action_stop"/>
-                            <android.widget.ImageView
-                                android:id="@+id/task_annotations_flag"
-                                style="@style/IconButton"
-                                android:layout_width="24dp"
-                                android:layout_height="24dp"
-                                android:layout_gravity="center_vertical"
-                                android:src="@drawable/ic_status_annotations"/>
-                            <FrameLayout
-                                android:layout_width="0dp"
-                                android:layout_height="match_parent"
-                                android:layout_weight="1"/>
+                        </LinearLayout>
+                        <LinearLayout android:layout_width="0dp"
+                            android:layout_weight="0.5"
+                            android:orientation="vertical"
+                            android:id="@+id/task_labels_left"
+                            android:layout_height="wrap_content">
+                            <!--<include layout="@layout/item_one_label_left"/>-->
+                        </LinearLayout>
+                        <LinearLayout android:layout_width="0dp"
+                            android:layout_weight="0.5"
+                            android:orientation="vertical"
+                            android:id="@+id/task_labels_right"
+                            android:layout_height="wrap_content">
+                <!--<include layout="@layout/item_one_label_right"/>-->
                         </LinearLayout>
                         <LinearLayout
-                                android:id="@+id/task_bottom_btns"
-                                android:layout_width="wrap_content"
-                                android:layout_height="match_parent"
-                                android:visibility="gone"
-                                android:orientation="horizontal">
+                            android:layout_weight="0"
+                            android:orientation="vertical"
+                            android:layout_gravity="bottom"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content">
                             <android.widget.ImageButton
-                                    android:id="@+id/task_delete_btn"
-                                    style="@style/IconButton"
-                                    android:src="@drawable/ic_action_delete"/>
-                            <android.widget.ImageButton
-                                    android:id="@+id/task_annotate_btn"
-                                    style="@style/IconButton"
-                                    android:src="@drawable/ic_action_annotate"/>
-                            <android.widget.ImageButton
-                                    android:id="@+id/task_edit_btn"
-                                    style="@style/IconButton"
-                                    android:src="@drawable/ic_action_edit"/>
-                        </LinearLayout>
-                        <android.widget.ImageButton
                                 android:id="@+id/task_more_btn"
                                 style="@style/IconButton"
-                                android:layout_gravity="top"
                                 android:src="@drawable/ic_action_more"/>
+                        </LinearLayout>
                     </LinearLayout>
+                    <FrameLayout
+                        android:id="@+id/task_bottom_btns"
+                        android:layout_width="match_parent"
+                        android:visibility="gone"
+                        android:layout_height="wrap_content">
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_gravity="right"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+                            <android.widget.ImageButton
+                                android:id="@+id/task_delete_btn"
+                                style="@style/IconButton"
+                                android:src="@drawable/ic_action_delete"/>
+                            <android.widget.ImageButton
+                                android:id="@+id/task_annotate_btn"
+                                style="@style/IconButton"
+                                android:src="@drawable/ic_action_annotate"/>
+                            <android.widget.ImageButton
+                                android:id="@+id/task_edit_btn"
+                                style="@style/IconButton"
+                                android:src="@drawable/ic_action_edit"/>
+                        </LinearLayout>
+                    </FrameLayout>
                     <LinearLayout
                             android:id="@+id/task_annotations"
                             android:layout_width="match_parent"
