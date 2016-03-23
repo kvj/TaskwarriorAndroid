@@ -1,3 +1,6 @@
 [submodule "Lima1Common"]
 	path = Lima1Common
 	url = git@github.com:kvj/Lima1Common.git
+[submodule "cli"]
+	path = cli
+	url = https://kvorobyev@bitbucket.org/kvorobyev/taskwarriorandroidcli.git
