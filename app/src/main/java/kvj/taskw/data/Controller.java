@@ -347,7 +347,7 @@ public class Controller extends org.kvj.bravo7.ng.Controller {
         notificationManager.notify(account, type.id, nn);
     }
 
-    public void cancelNotification(NotificationType type, String account) {
+    public void cancel(NotificationType type, String account) {
         notificationManager.cancel(account, type.id);
     }
 

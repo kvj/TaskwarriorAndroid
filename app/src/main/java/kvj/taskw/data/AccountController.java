@@ -30,9 +30,11 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -54,6 +56,8 @@ public class AccountController {
     private static final String CONFIRM_YN = " (yes/no) ";
     private final String accountName;
     private Thread acceptThread = null;
+
+    private Set<NotificationType> notificationTypes = new HashSet<>();
 
     public File taskrc() {
         return new File(tasksFolder, TASKRC);
@@ -177,6 +181,40 @@ public class AccountController {
         socketName = UUID.randomUUID().toString().toLowerCase();
         syncSocket = openLocalSocket(socketName);
         scheduleSync(TimerType.Periodical); // Schedule on start
+        loadNotificationTypes();
+    }
+
+    private void loadNotificationTypes() {
+        new Tasks.SimpleTask<String>() {
+
+            @Override
+            protected String doInBackground() {
+                Map<String, String> config = taskSettings(androidConf("sync.notification"));
+                if (config.isEmpty()) {
+                    return "all";
+                }
+                return config.values().iterator().next();
+            }
+
+            @Override
+            protected void onPostExecute(String s) {
+                notificationTypes.clear();
+                if ("all".equals(s)) { // All types
+                    notificationTypes.add(NotificationType.Sync);
+                    notificationTypes.add(NotificationType.Success);
+                    notificationTypes.add(NotificationType.Error);
+                    return;
+                }
+                for (String type : s.split(",")) { // Search type
+                    for (NotificationType nt : NotificationType.values()) { // Check name
+                        if (nt.name.equalsIgnoreCase(type.trim())) { // Found
+                            notificationTypes.add(nt);
+                            break;
+                        }
+                    }
+                }
+            }
+        }.exec();
     }
 
     private class StringAggregator implements StreamConsumer {
@@ -216,6 +254,15 @@ public class AccountController {
 
         TimerType(String type) {
             this.type = type;
+        }
+    }
+
+    public enum NotificationType {Sync("sync"), Success("success"), Error("error");
+
+        private final String name;
+
+        NotificationType(String name) {
+            this.name = name;
         }
     }
 
@@ -264,13 +311,23 @@ public class AccountController {
         return String.format("android.%s", format);
     }
 
+    private boolean toggleSyncNotification(NotificationCompat.Builder n, NotificationType type) {
+        if (notificationTypes.contains(type)) { // Have to show
+            controller.notify(Controller.NotificationType.Sync, accountName, n);
+            return true;
+        } else {
+            controller.cancel(Controller.NotificationType.Sync, accountName);
+            return false;
+        }
+    }
+
     public String taskSync() {
         NotificationCompat.Builder n = controller.newNotification(accountName);
         n.setOngoing(true);
         n.setContentText("Sync is in progress");
         n.setTicker("Sync is in progress");
         n.setPriority(NotificationCompat.PRIORITY_DEFAULT);
-        controller.notify(Controller.NotificationType.Sync, accountName, n);
+        toggleSyncNotification(n, NotificationType.Sync);
         StringAggregator err = new StringAggregator();
         StringAggregator out = new StringAggregator();
         boolean result = callTask(out, err, "rc.taskd.socket=" + socketName, "sync");
@@ -281,7 +338,7 @@ public class AccountController {
             n.setContentText("Sync complete");
             n.setPriority(NotificationCompat.PRIORITY_MIN);
             n.addAction(R.drawable.ic_action_sync, "Sync again", syncIntent("notification"));
-            controller.notify(Controller.NotificationType.Sync, accountName, n);
+            toggleSyncNotification(n, NotificationType.Success);
             scheduleSync(TimerType.Periodical);
             return null;
         } else {
@@ -292,7 +349,7 @@ public class AccountController {
             n.setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
             n.setPriority(NotificationCompat.PRIORITY_DEFAULT);
             n.addAction(R.drawable.ic_action_sync, "Retry now", syncIntent("notification"));
-            controller.notify(Controller.NotificationType.Sync, accountName, n);
+            toggleSyncNotification(n, NotificationType.Error);
             scheduleSync(TimerType.AfterError);
             return error;
         }
