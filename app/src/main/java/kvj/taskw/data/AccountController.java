@@ -112,7 +112,12 @@ public class AccountController {
     }
 
     public int taskCustom(String command, StreamConsumer out, StreamConsumer err) {
-        int result = callTask(out, err, false, command.split(" "));
+        List<String> params = new ArrayList<>();
+        if (!TextUtils.isEmpty(socketName)) { // Have socket opened - add key
+            params.add("rc.taskd.socket=" + socketName);
+        }
+        Collections.addAll(params, command.split(" "));
+        int result = callTask(out, err, false, params.toArray(new String[0]));
         err.eat("");
         err.eat(String.format("Exit code: %d", result));
         return result;
