@@ -53,6 +53,7 @@ public class App extends org.kvj.bravo7.ng.App<Controller> {
             "summary",
             "timesheet",
             "projects"};
+    public static final String LOG_FILE = "taskw.log.txt";
 
     @Override
     protected Controller create() {

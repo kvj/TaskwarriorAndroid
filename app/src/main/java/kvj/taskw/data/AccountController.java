@@ -59,6 +59,8 @@ public class AccountController {
 
     private Set<NotificationType> notificationTypes = new HashSet<>();
 
+    FileLogger fileLogger = null;
+
     public File taskrc() {
         return new File(tasksFolder, TASKRC);
     }
@@ -127,6 +129,14 @@ public class AccountController {
         return id;
     }
 
+    public boolean debugEnabled() {
+        return fileLogger != null;
+    }
+
+    public FileLogger debugLogger() {
+        return fileLogger;
+    }
+
     public interface TaskListener {
         public void onStart();
         public void onFinish();
@@ -184,9 +194,24 @@ public class AccountController {
         this.id = folder;
         tasksFolder = initTasksFolder();
         socketName = UUID.randomUUID().toString().toLowerCase();
+        initLogger();
         syncSocket = openLocalSocket(socketName);
         scheduleSync(TimerType.Periodical); // Schedule on start
         loadNotificationTypes();
+    }
+
+    private void initLogger() {
+        fileLogger = null;
+        Map<String, String> conf = taskSettings(androidConf("debug"));
+        if ("y".equalsIgnoreCase(conf.get("android.debug"))) { // Enabled
+            fileLogger = new FileLogger(tasksFolder);
+        }
+    }
+
+    private void debug(Object... params) {
+        if (null != fileLogger) { // Enabled
+            fileLogger.log(params);
+        }
     }
 
     private void loadNotificationTypes() {
@@ -336,6 +361,7 @@ public class AccountController {
         StringAggregator err = new StringAggregator();
         StringAggregator out = new StringAggregator();
         boolean result = callTask(out, err, "rc.taskd.socket=" + socketName, "sync");
+        debug("Sync result:", result);
         logger.d("Sync result:", result, "ERR:", err.text(), "OUT:", out.text());
         n = controller.newNotification(accountName);
         n.setOngoing(false);
@@ -348,6 +374,7 @@ public class AccountController {
             return null;
         } else {
             String error = err.text();
+            debug("Sync error output:", error);
             n.setContentText("Sync failed");
             n.setTicker("Sync failed");
             n.setSubText(error);
@@ -613,9 +640,11 @@ public class AccountController {
         });
         try {
             if (null == controller.executable) {
+                debug("Error in binary call: executable not found");
                 throw new RuntimeException("Invalid executable");
             }
             if (null == tasksFolder) {
+                debug("Error in binary call: invalid profile folder");
                 throw new RuntimeException("Invalid folder");
             }
             List<String> args = new ArrayList<>();
@@ -634,16 +663,20 @@ public class AccountController {
             pb.environment().put("TASKDATA", new File(tasksFolder, DATA_FOLDER).getAbsolutePath());
             Process p = pb.start();
             logger.d("Calling now:", tasksFolder, args);
+//            debug("Execute:", args);
             Thread outThread = readStream(p.getInputStream(), p.getOutputStream(), out);
             Thread errThread = readStream(p.getErrorStream(), null, err);
             int exitCode = p.waitFor();
             logger.d("Exit code:", exitCode, args);
+//            debug("Execute result:", exitCode);
             if (null != outThread) outThread.join();
             if (null != errThread) errThread.join();
             return exitCode;
         } catch (Exception e) {
             logger.e(e, "Failed to execute task");
             err.eat(e.getMessage());
+            debug("Execute failure:");
+            debug(e);
             return 255;
         } finally {
             taskListeners.emit(new Listeners.ListenerEmitter<TaskListener>() {
@@ -686,10 +719,15 @@ public class AccountController {
             int lastColon = _host.lastIndexOf(":");
             this.port = Integer.parseInt(_host.substring(lastColon + 1));
             this.host = _host.substring(0, lastColon);
+            debug("Host and port:", host, port);
+            debug("CA file:", fileFromConfig(config.get("taskd.ca")));
+            debug("Certificate file:", fileFromConfig(config.get("taskd.certificate")));
+            debug("Key file:", fileFromConfig(config.get("taskd.key")));
             this.factory = SSLHelper.tlsSocket(
                     new FileInputStream(fileFromConfig(config.get("taskd.ca"))),
                     new FileInputStream(fileFromConfig(config.get("taskd.certificate"))),
                     new FileInputStream(fileFromConfig(config.get("taskd.key"))), trustType);
+            debug("Credentials loaded");
             logger.d("Connecting to:", this.host, this.port);
             this.socket = new LocalServerSocket(name);
         }
@@ -708,7 +746,7 @@ public class AccountController {
                 this.socket = socket;
             }
 
-            private void recvSend(InputStream from, OutputStream to) throws IOException {
+            private long recvSend(InputStream from, OutputStream to) throws IOException {
                 byte[] head = new byte[4]; // Read it first
                 from.read(head);
                 to.write(head);
@@ -721,18 +759,20 @@ public class AccountController {
                     int recv = from.read(buffer);
 //                logger.d("Actually get:", recv);
                     if (recv == -1) {
-                        return;
+                        return bytes;
                     }
                     to.write(buffer, 0, recv);
                     to.flush();
                     bytes += recv;
                 }
                 logger.d("Transfer done", bytes, size);
+                return bytes;
             }
 
             @Override
             public void run() {
                 SSLSocket remoteSocket = null;
+                debug("Communication taskw<->android started");
                 try {
                     remoteSocket = (SSLSocket) factory.createSocket(host, port);
                     final SSLSocket finalRemoteSocket = remoteSocket;
@@ -747,16 +787,21 @@ public class AccountController {
                             finalRemoteSocket.setEnabledProtocols(new String[]{"TLSv1"});
                         }
                     });
+                    debug("Ready to establish TLS connection to:", host, port);
                     InputStream localInput = socket.getInputStream();
                     OutputStream localOutput = socket.getOutputStream();
                     InputStream remoteInput = remoteSocket.getInputStream();
                     OutputStream remoteOutput = remoteSocket.getOutputStream();
+                    debug("Connected to taskd server");
                     logger.d("Connected, will read first piece", remoteSocket.getSession().getCipherSuite());
-                    recvSend(localInput, remoteOutput);
-                    recvSend(remoteInput, localOutput);
+                    long bread = recvSend(localInput, remoteOutput);
+                    long bwrite = recvSend(remoteInput, localOutput);
                     logger.d("Sync success");
+                    debug("Transfer complete. Bytes sent:", bread, "Bytes received:", bwrite);
                 } catch (Exception e) {
                     logger.e(e, "Failed to transfer data");
+                    debug("Transfer failure");
+                    debug(e);
                 } finally {
                     if (null != remoteSocket) {
                         try {
@@ -778,16 +823,20 @@ public class AccountController {
         try {
             final Map<String, String> config = taskSettings("taskd.ca", "taskd.certificate", "taskd.key", "taskd.server", "taskd.trust");
             logger.d("Will run with config:", config);
+            debug("taskd.* config:", config);
             if (!config.containsKey("taskd.server")) {
                 // Not configured
                 logger.d("Sync not configured - give up");
                 controller.toastMessage("Sync disabled: no taskd.server value", true);
+                debug("taskd.server is empty: sync disabled");
                 return null;
             }
             final LocalSocketRunner runner;
             try {
                 runner = new LocalSocketRunner(name, config);
             } catch (Exception e) {
+                logger.e(e, "Error opening socket");
+                debug(e);
                 controller.toastMessage("Sync disabled: certificate load failure", true);
                 return null;
             }
@@ -796,8 +845,11 @@ public class AccountController {
                 public void run() {
                     while (true) {
                         try {
+//                            debug("Incoming connection: task binary -> android");
                             runner.accept();
                         } catch (IOException e) {
+                            debug("Socket accept failed");
+                            debug(e);
                             logger.w(e, "Accept failed");
                             return;
                         }

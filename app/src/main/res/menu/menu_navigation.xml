@@ -16,6 +16,10 @@
             android:title="Settings"
             android:icon="@drawable/ic_action_settings"/>
     <item
+            android:id="@+id/menu_nav_debug"
+            android:title="Share debug file"
+            android:icon="@drawable/ic_action_debug"/>
+    <item
             android:id="@+id/menu_nav_reload"
             android:title="Reload"
             android:icon="@drawable/ic_action_reload"/>

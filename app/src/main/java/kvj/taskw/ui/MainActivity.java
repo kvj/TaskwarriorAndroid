@@ -299,6 +299,17 @@ public class MainActivity extends AppCompatActivity implements Controller.ToastM
             case R.id.menu_nav_run:
                 startActivity(ac.intentForRunTask());
                 break;
+            case R.id.menu_nav_debug:
+                Intent emailIntent = new Intent(android.content.Intent.ACTION_SEND);
+                emailIntent.setType("text/plain");
+                emailIntent.putExtra(android.content.Intent.EXTRA_TEXT, "Taskwarrior for Android debug output");
+                emailIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(ac.debugLogger().file()));
+                try {
+                    startActivity(Intent.createChooser(emailIntent, "Share debug output..."));
+                } catch (Throwable t) {
+                    controller.toastMessage("Failed to share debug file", true);
+                }
+                break;
             case R.id.menu_nav_settings:
                 // Open taskrc for editing
                 Intent intent = new Intent(Intent.ACTION_EDIT);
@@ -540,6 +551,7 @@ public class MainActivity extends AppCompatActivity implements Controller.ToastM
             @Override
             public void finish(Map<String, String> result) {
                 // We're in UI thread
+                navigation.getMenu().findItem(R.id.menu_nav_debug).setVisible(ac.debugEnabled());
                 MenuItem reportsMenu = navigation.getMenu().findItem(R.id.menu_nav_reports);
                 reportsMenu.getSubMenu().clear();
                 for (Map.Entry<String, String> entry : result.entrySet()) { // Add reports
