@@ -374,7 +374,7 @@ public class AccountController {
                     }
                 }
             }
-        }, errConsumer, "show");
+        }, errConsumer, "rc.defaultwidth=1000", "show");
         return result;
     }
 
