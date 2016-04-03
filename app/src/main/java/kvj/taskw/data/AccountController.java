@@ -205,6 +205,7 @@ public class AccountController {
         Map<String, String> conf = taskSettings(androidConf("debug"));
         if ("y".equalsIgnoreCase(conf.get("android.debug"))) { // Enabled
             fileLogger = new FileLogger(tasksFolder);
+            debug("Profile:", accountName, id, fileLogger.logFile(tasksFolder));
         }
     }
 
