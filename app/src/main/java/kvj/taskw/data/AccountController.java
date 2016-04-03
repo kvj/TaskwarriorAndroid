@@ -45,6 +45,7 @@ import javax.net.ssl.SSLSocketFactory;
 import kvj.taskw.App;
 import kvj.taskw.R;
 import kvj.taskw.sync.SSLHelper;
+import kvj.taskw.ui.MainActivity;
 import kvj.taskw.ui.MainListAdapter;
 import kvj.taskw.ui.RunActivity;
 
@@ -344,6 +345,9 @@ public class AccountController {
 
     private boolean toggleSyncNotification(NotificationCompat.Builder n, NotificationType type) {
         if (notificationTypes.contains(type)) { // Have to show
+            Intent intent = new Intent(controller.context(), MainActivity.class);
+            intent.putExtra(App.KEY_ACCOUNT, id);
+            n.setContentIntent(PendingIntent.getActivity(controller.context(), 0, intent, PendingIntent.FLAG_UPDATE_CURRENT));
             controller.notify(Controller.NotificationType.Sync, accountName, n);
             return true;
         } else {
