@@ -394,6 +394,10 @@ public class AccountController {
 
     Pattern linePatthern = Pattern.compile("^([A-Za-z0-9\\._]+)\\s+(\\S.*)$");
 
+    private String taskSetting(String name) {
+        return taskSettings(name).get(name);
+    }
+
     private Map<String, String> taskSettings(final String... names) {
         final Map<String, String> result = new LinkedHashMap<>();
         callTask(new StreamConsumer() {
@@ -881,6 +885,17 @@ public class AccountController {
         } else {
             query = String.format("(%s)", query);
         }
+        String context = taskSetting("context");
+        logger.d("taskList context:", context);
+        debug("List query:", query, "context:", context);
+        if (!TextUtils.isEmpty(context)) { // Have context configured
+            String cQuery = taskSetting(String.format("context.%s", context));
+            if (!TextUtils.isEmpty(cQuery)) { // Prepend context
+                debug("Context query:", cQuery);
+                query = String.format("(%s) %s", cQuery, query);
+            }
+            logger.d("Context query:", cQuery, query);
+        }
         final List<JSONObject> result = new ArrayList<>();
         List<String> params = new ArrayList<>();
         params.add("rc.json.array=off");
@@ -898,7 +913,7 @@ public class AccountController {
                 }
             }
         }, errConsumer, params.toArray(new String[0]));
-        logger.d("List for:", query, result.size());
+        logger.d("List for:", query, result.size(), context);
         return result;
     }
 
