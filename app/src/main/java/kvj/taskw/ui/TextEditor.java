@@ -131,7 +131,11 @@ public class TextEditor extends AppCompatActivity {
 
             @Override
             protected Boolean doInBackground() {
-                return controller.saveFile(fileName, text);
+                String saveMe = text;
+                if (!saveMe.isEmpty() && !saveMe.endsWith("\n")) { // Auto-add new line
+                    saveMe += "\n";
+                }
+                return controller.saveFile(fileName, saveMe);
             }
 
             @Override
