@@ -720,9 +720,14 @@ public class AccountController {
             this.port = Integer.parseInt(_host.substring(lastColon + 1));
             this.host = _host.substring(0, lastColon);
             debug("Host and port:", host, port);
-            debug("CA file:", fileFromConfig(config.get("taskd.ca")));
-            debug("Certificate file:", fileFromConfig(config.get("taskd.certificate")));
-            debug("Key file:", fileFromConfig(config.get("taskd.key")));
+            if (null != fileLogger) { // Can't just call debug, because of use of fileLogger
+                debug("CA file:",
+                        fileLogger.logFile(fileFromConfig(config.get("taskd.ca"))));
+                debug("Certificate file:",
+                        fileLogger.logFile(fileFromConfig(config.get("taskd.certificate"))));
+                debug("Key file:",
+                        fileLogger.logFile(fileFromConfig(config.get("taskd.key"))));
+            }
             this.factory = SSLHelper.tlsSocket(
                     new FileInputStream(fileFromConfig(config.get("taskd.ca"))),
                     new FileInputStream(fileFromConfig(config.get("taskd.certificate"))),

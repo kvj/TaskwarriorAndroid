@@ -75,6 +75,26 @@ public class FileLogger {
         }
     }
 
+    public String logFile(File f) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(f.getAbsolutePath());
+        sb.append(", exist: ");
+        sb.append(f.exists());
+        sb.append(", isFile: ");
+        sb.append(f.isFile());
+        sb.append(", isFolder: ");
+        sb.append(f.isDirectory());
+        if (f.exists()) { // More
+            sb.append(", canRead: ");
+            sb.append(f.canRead());
+            sb.append(", canWrite: ");
+            sb.append(f.canWrite());
+            sb.append(", size: ");
+            sb.append(f.length());
+        }
+        return sb.toString();
+    }
+
     public File file() {
         return file;
     }
