@@ -9,8 +9,8 @@ android {
         applicationId "kvj.taskw"
         minSdkVersion 14
         targetSdkVersion 23
-        versionCode 1
-        versionName "0.1.160303"
+        versionCode 3
+        versionName "0.1.160410"
     }
     androidAutoVersion(defaultConfig, "0.1.")
     signingConfigs {
